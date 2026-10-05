@@ -73,13 +73,13 @@ LunasTech/
       main.tsx, App.tsx, index.css (design tokens), vite-env.d.ts
       layout/                 Shell.tsx (fixed header, centered content column)
       components/ui/          Button.tsx, TextField.tsx (plain Tailwind on tokens; shadcn not installed)
-      features/auth/          AuthProvider, AuthFlow, LoginScreen, SignupScreen, CheckEmailScreen, errors.ts, validation.ts
+      features/auth/          AuthProvider, AuthFlow, LoginScreen, SignupScreen, ForgotPasswordScreen, ResetPasswordScreen, CheckEmailScreen, errors.ts, validation.ts
       features/               guides, simulations, progress, admin (empty)
       lib/                    supabase.ts (client), utils.ts (cn helper)
 ```
 
 **Module / Feature Map:**
-- auth -> Signup, login, email confirmation, session (Supabase Auth). Built; forgot password not yet.
+- auth -> Signup, login, email confirmation, session (Supabase Auth). Built, including forgot and reset password.
 - guides -> Device and symptom selection, matching guides, offline cache
 - simulations -> Step simulation; scoring and feedback come from the submit_answer database function
 - progress -> Saved progress, completed simulations, learning level
@@ -94,15 +94,18 @@ LunasTech/
 - features/simulations -> depends on -> start_simulation() and submit_answer() in the initial_schema migration (changing their names or return shape breaks it)
 - features/admin -> depends on -> admin_simulation_steps() and the admin row level security policies
 - recalculate_learning_level() -> depends on -> simulation_attempts.passed, guides.kind
-- src/App.tsx -> depends on -> features/auth (AuthProvider, AuthFlow), layout/Shell.tsx, components/ui/Button.tsx
+- src/App.tsx -> depends on -> features/auth (AuthProvider, AuthFlow, ResetPasswordScreen), layout/Shell.tsx, components/ui/Button.tsx
 - features/auth/* -> depends on -> src/lib/supabase.ts, components/ui/*, index.css tokens
-- features/auth/CheckEmailScreen.tsx and SignupScreen.tsx -> depend on -> the Supabase "Confirm email" setting and redirect allow-list (see Auth configuration)
+- features/auth/CheckEmailScreen.tsx, SignupScreen.tsx and ForgotPasswordScreen.tsx -> depend on -> the Supabase "Confirm email" setting and redirect allow-list (see Auth configuration)
+- features/auth/AuthProvider.tsx (recovering, finishRecovery) -> used by -> App.tsx and ResetPasswordScreen; it reads type=recovery from the URL hash and the PASSWORD_RECOVERY event
+- features/auth/AuthFlow.tsx -> depends on -> every pre-sign-in screen; CheckEmailScreen takes purpose "signup" or "recovery"
 - vite.config.ts -> depends on -> tsconfig.app.json (the "@" alias is defined in both; change both together)
 
 **Auth configuration (Supabase dashboard, not in the repo):**
 - Authentication > Sign In / Providers > Email: "Confirm email" on (default on hosted projects). If it is off, signup signs the user in at once and skips the "Check your email" screen.
 - Authentication > URL Configuration: Site URL and Redirect URLs must include every address the app runs on (http://localhost:5173 for development, the Vercel address later). Otherwise the confirmation link fails.
 - Minimum password length: raise to 8 to match the app (default 6).
+- Password reset emails use the same Site URL and Redirect URLs as signup. The "Reset Password" email template must keep the default {{ .ConfirmationURL }} link.
 - Email sending: built-in sender, 2 emails per hour for the whole project, until open-questions.md #14 is resolved.
 
 **What Must Never Be Touched Without Human Approval:**
@@ -129,5 +132,6 @@ AI: when the structure changes during the build, log it here.
 | 2026-10-05 | Accent #15803d and Inter set in tokens; @fontsource-variable/inter added | Decision #5 |
 | 2026-10-05 | Added client scaffold written by hand (no install run) | Vite project setup |
 | 2026-10-05 | Added features/auth, components/ui/Button + TextField, layout/Shell; App.tsx now renders auth screens or a signed-in placeholder | Decision #7 |
+| 2026-10-06 | Added ForgotPasswordScreen and ResetPasswordScreen; CheckEmailScreen gained a purpose prop; AuthProvider gained recovering state | Decision #8 |
 
 ---

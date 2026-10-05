@@ -8,10 +8,16 @@ import { isValidEmail } from "./validation";
 type Props = {
   notice: string | null;
   onNeedsConfirmation: (email: string) => void;
+  onForgotPassword: () => void;
   onSwitchToSignup: () => void;
 };
 
-export function LoginScreen({ notice, onNeedsConfirmation, onSwitchToSignup }: Readonly<Props>) {
+export function LoginScreen({
+  notice,
+  onNeedsConfirmation,
+  onForgotPassword,
+  onSwitchToSignup,
+}: Readonly<Props>) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState({ email: false, password: false });
@@ -69,6 +75,9 @@ export function LoginScreen({ notice, onNeedsConfirmation, onSwitchToSignup }: R
         onBlur={() => setTouched((t) => ({ ...t, password: true }))}
         error={passwordError}
       />
+      <TextButton onClick={onForgotPassword} className="-mt-2 self-end py-2">
+        Forgot password?
+      </TextButton>
       {error && (
         <p role="alert" className="text-sm text-danger">
           {error}

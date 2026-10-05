@@ -12,8 +12,12 @@ import { supabase } from "@/lib/supabase";
 type AuthState = {
   session: Session | null;
   loading: boolean;
-  // Set when the user opened a confirmation link that failed or expired.
+  // Set when the user opened an email link that failed or expired.
   linkError: string | null;
+  // True while the user arrived from a password reset link and has not yet
+  // chosen a new password. The session is already signed in at that point.
+  recovering: boolean;
+  finishRecovery: () => void;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -25,20 +29,29 @@ function readLinkError(): string | null {
   );
   if (!params.get("error") && !params.get("error_code")) return null;
   window.history.replaceState(null, "", window.location.pathname);
-  return "That confirmation link is invalid or has expired. Log in to get a new one.";
+  return "That link is invalid or has expired. Log in or reset your password to get a new one.";
+}
+
+// A valid reset link lands with type=recovery in the hash. Read it on first
+// render, before Supabase clears the hash, so the reset screen shows at once.
+function readRecoveryLink(): boolean {
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return params.get("type") === "recovery";
 }
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [linkError] = useState<string | null>(readLinkError);
+  const [recovering, setRecovering] = useState(readRecoveryLink);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
     });
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data } = supabase.auth.onAuthStateChange((event, next) => {
+      if (event === "PASSWORD_RECOVERY") setRecovering(true);
       setSession(next);
       setLoading(false);
     });
@@ -46,8 +59,14 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   }, []);
 
   const value = useMemo(
-    () => ({ session, loading, linkError }),
-    [session, loading, linkError],
+    () => ({
+      session,
+      loading,
+      linkError,
+      recovering,
+      finishRecovery: () => setRecovering(false),
+    }),
+    [session, loading, linkError, recovering],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

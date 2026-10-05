@@ -17,6 +17,8 @@ export function authErrorMessage(error: AuthError): string {
       return `Password is too weak. Use at least ${PASSWORD_MIN_LENGTH} characters.`;
     case "user_already_exists":
       return "An account with this email already exists. Log in instead.";
+    case "same_password":
+      return "Choose a password different from your current one.";
     case "signup_disabled":
       return "Sign up is turned off.";
     default:

@@ -7,9 +7,14 @@ import { authErrorMessage } from "./errors";
 // is limited to 2 emails per hour for the whole project (open-questions.md #14).
 const RESEND_COOLDOWN = 60;
 
-type Props = { email: string; onBack: () => void };
+type Props = {
+  email: string;
+  // "signup": confirmation link. "recovery": password reset link.
+  purpose: "signup" | "recovery";
+  onBack: () => void;
+};
 
-export function CheckEmailScreen({ email, onBack }: Readonly<Props>) {
+export function CheckEmailScreen({ email, purpose, onBack }: Readonly<Props>) {
   const [secondsLeft, setSecondsLeft] = useState(RESEND_COOLDOWN);
   const [sending, setSending] = useState(false);
   const [status, setStatus] = useState<{ kind: "sent" | "error"; text: string } | null>(null);
@@ -23,11 +28,16 @@ export function CheckEmailScreen({ email, onBack }: Readonly<Props>) {
   async function resend() {
     setSending(true);
     setStatus(null);
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email,
-      options: { emailRedirectTo: window.location.origin },
-    });
+    const { error } =
+      purpose === "recovery"
+        ? await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin,
+          })
+        : await supabase.auth.resend({
+            type: "signup",
+            email,
+            options: { emailRedirectTo: window.location.origin },
+          });
     setSending(false);
     if (error) {
       setStatus({ kind: "error", text: authErrorMessage(error) });
@@ -44,9 +54,16 @@ export function CheckEmailScreen({ email, onBack }: Readonly<Props>) {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-lg font-semibold">Check your email</h1>
-      <p className="text-base">
-        We sent a confirmation link to <span className="font-semibold">{email}</span>.
-      </p>
+      {purpose === "recovery" ? (
+        <p className="text-base">
+          If an account exists for <span className="font-semibold">{email}</span>, we sent a
+          link to reset the password.
+        </p>
+      ) : (
+        <p className="text-base">
+          We sent a confirmation link to <span className="font-semibold">{email}</span>.
+        </p>
+      )}
       {status?.kind === "error" && (
         <p role="alert" className="text-sm text-danger">
           {status.text}

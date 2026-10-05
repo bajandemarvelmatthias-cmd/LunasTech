@@ -249,3 +249,35 @@ Option A. Email and password only. Minimum password length 8. Sign up and Log in
 - Signing up with an address that already exists shows an "account already exists" message.
 - Components are plain Tailwind built on the tokens. shadcn is not installed yet, so they can be swapped later (decision #1).
 
+
+### #8
+**Date:** 2026-10-06
+**Milestone:** Forgot password and reset
+
+**Context:**
+Decision #7 left forgot password as the next auth task. The flow needs a
+way to ask for a link and a screen that sets the new password after the
+link is opened.
+
+**Options Considered:**
+- A: Supabase reset email. The link signs the user in and the app shows a "Reset password" screen before anything else.
+- B: Emailed one-time code typed into the app (needs a custom email template and a code entry screen).
+
+**Community Consensus:**
+Not searched. Chosen by recommendation; follows the same email-link pattern as signup (#7). Reference screens for this task were not collected.
+
+**Decision:**
+Option A. Login has one "Forgot password?" link under the password field.
+"Forgot password" asks for an email and sends the link. The existing
+"Check your email" screen is reused with a purpose (signup or recovery), so
+there is one resend implementation. The reset screen asks for a new password
+(minimum 8) and saves it. The reset message does not say whether the address
+has an account. B is rejected: it adds a template change and an extra screen
+for no stated need.
+
+**Consequences:**
+- AuthProvider exposes `recovering` and `finishRecovery`. It is set from `type=recovery` in the link or from the PASSWORD_RECOVERY event.
+- The reset link signs the user in. If they leave without saving a new password, they stay signed in with the old password unchanged.
+- The failed-link message is now generic ("That link is invalid or has expired...") because it covers both confirmation and reset links.
+- Reset emails share the 2-per-hour limit (open-questions.md #14) and the same redirect allow-list as signup.
+- Not tested against a live Supabase project.
