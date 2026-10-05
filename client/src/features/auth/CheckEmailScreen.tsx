@@ -9,7 +9,7 @@ const RESEND_COOLDOWN = 60;
 
 type Props = { email: string; onBack: () => void };
 
-export function CheckEmailScreen({ email, onBack }: Props) {
+export function CheckEmailScreen({ email, onBack }: Readonly<Props>) {
   const [secondsLeft, setSecondsLeft] = useState(RESEND_COOLDOWN);
   const [sending, setSending] = useState(false);
   const [status, setStatus] = useState<{ kind: "sent" | "error"; text: string } | null>(null);
@@ -37,22 +37,26 @@ export function CheckEmailScreen({ email, onBack }: Props) {
     setSecondsLeft(RESEND_COOLDOWN);
   }
 
+  let buttonLabel = "Resend email";
+  if (sending) buttonLabel = "Sending";
+  else if (secondsLeft > 0) buttonLabel = `Resend in ${secondsLeft}s`;
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-lg font-semibold">Check your email</h1>
       <p className="text-base">
         We sent a confirmation link to <span className="font-semibold">{email}</span>.
       </p>
-      {status && (
-        <p
-          role={status.kind === "error" ? "alert" : "status"}
-          className={status.kind === "error" ? "text-sm text-danger" : "text-sm text-text-muted"}
-        >
+      {status?.kind === "error" && (
+        <p role="alert" className="text-sm text-danger">
           {status.text}
         </p>
       )}
+      {status?.kind === "sent" && (
+        <output className="text-sm text-text-muted">{status.text}</output>
+      )}
       <Button onClick={resend} disabled={secondsLeft > 0} loading={sending}>
-        {sending ? "Sending" : secondsLeft > 0 ? `Resend in ${secondsLeft}s` : "Resend email"}
+        {buttonLabel}
       </Button>
       <p className="text-center text-base">
         <TextButton onClick={onBack}>Back to log in</TextButton>

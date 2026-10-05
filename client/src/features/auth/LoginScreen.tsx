@@ -11,7 +11,7 @@ type Props = {
   onSwitchToSignup: () => void;
 };
 
-export function LoginScreen({ notice, onNeedsConfirmation, onSwitchToSignup }: Props) {
+export function LoginScreen({ notice, onNeedsConfirmation, onSwitchToSignup }: Readonly<Props>) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState({ email: false, password: false });

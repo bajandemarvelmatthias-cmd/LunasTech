@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -27,7 +28,7 @@ function readLinkError(): string | null {
   return "That confirmation link is invalid or has expired. Log in to get a new one.";
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [linkError] = useState<string | null>(readLinkError);
@@ -44,11 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => data.subscription.unsubscribe();
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ session, loading, linkError }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ session, loading, linkError }),
+    [session, loading, linkError],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthState {
