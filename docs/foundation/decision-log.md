@@ -281,3 +281,35 @@ for no stated need.
 - The failed-link message is now generic ("That link is invalid or has expired...") because it covers both confirmation and reset links.
 - Reset emails share the 2-per-hour limit (open-questions.md #14) and the same redirect allow-list as signup.
 - Not tested against a live Supabase project.
+
+### #9
+**Date:** 2026-10-06
+**Milestone:** Guides (device, symptom, matching guides, guide steps)
+
+**Context:**
+The brief requires picking a device and symptom, getting matching guides for
+small fixes and major repairs, and saving progress automatically. No router
+is installed, no tab bar is needed with one destination, and the database
+already holds everything (no schema change).
+
+**Options Considered:**
+- A: One linear flow: Device, Symptom, matching guides, then the guide one step at a time. State-based, no router.
+- B: Add a router so every screen has its own address and the browser back button works.
+
+**Community Consensus:**
+Not searched. Reference screens were not collected for this milestone (the human asked to proceed); the layout follows iFixit's one-step-at-a-time guide format already approved in #5.
+
+**Decision:**
+Option A. When exactly one guide matches a symptom it opens at once (no choice
+needed). Steps show one at a time with a progress bar; the position is saved on
+every step change and an unfinished guide resumes where it stopped. Finish
+stamps completed_at. A completed guide restarts at step 1. B is deferred: it
+needs a new dependency (no install was allowed this session).
+
+**Consequences:**
+- The browser back button leaves the app instead of going back one screen. Revisit with a router before launch.
+- Only published guides are shown to users, even to admins.
+- The device_types table is seeded; symptoms, guides and guide_steps are empty, so every list shows its empty message until rows exist (admin screens or SQL).
+- Offline caching of opened guides is not built yet and is still required by the brief.
+- Simulations are not linked from a guide yet.
+- Not tested against a live Supabase project.

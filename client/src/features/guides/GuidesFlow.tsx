@@ -1,0 +1,127 @@
+import { useEffect, useState } from "react";
+import { useLoad } from "@/lib/useLoad";
+import { fetchDevices, fetchGuides, fetchSymptoms } from "./api";
+import { GuideScreen } from "./GuideScreen";
+import { ListScreen } from "./ListScreen";
+import { KIND_LABEL, type DeviceType, type Guide, type Symptom } from "./types";
+
+type Route =
+  | { name: "devices" }
+  | { name: "symptoms"; device: DeviceType }
+  | { name: "guides"; device: DeviceType; symptom: Symptom }
+  | { name: "guide"; guide: Guide };
+
+// Linear flow: device, symptom, matching guides, then the guide itself.
+// State-based like AuthFlow; there is no router yet, so the browser back
+// button leaves the app instead of going back one screen.
+export function GuidesFlow() {
+  const [stack, setStack] = useState<Route[]>([{ name: "devices" }]);
+  const route = stack[stack.length - 1];
+  const push = (next: Route) => setStack((s) => [...s, next]);
+  const pop = () => setStack((s) => s.slice(0, -1));
+  const replace = (next: Route) => setStack((s) => [...s.slice(0, -1), next]);
+
+  switch (route.name) {
+    case "devices":
+      return <DeviceList onSelect={(device) => push({ name: "symptoms", device })} />;
+    case "symptoms":
+      return (
+        <SymptomList
+          device={route.device}
+          onBack={pop}
+          onSelect={(symptom) => push({ name: "guides", device: route.device, symptom })}
+        />
+      );
+    case "guides":
+      return (
+        <GuideList
+          symptom={route.symptom}
+          onBack={pop}
+          onSelect={(guide) => push({ name: "guide", guide })}
+          // Exactly one match needs no choice: open it and keep Back going to symptoms.
+          onOnlyGuide={(guide) => replace({ name: "guide", guide })}
+        />
+      );
+    case "guide":
+      return <GuideScreen guide={route.guide} onBack={pop} />;
+  }
+}
+
+function DeviceList({ onSelect }: Readonly<{ onSelect: (device: DeviceType) => void }>) {
+  const { data, loading, error, retry } = useLoad(fetchDevices, []);
+  return (
+    <ListScreen
+      title="Device"
+      loading={loading}
+      error={error}
+      onRetry={retry}
+      items={data}
+      empty="No devices yet."
+      onSelect={(id) => {
+        const device = data?.find((d) => d.id === id);
+        if (device) onSelect(device);
+      }}
+    />
+  );
+}
+
+type SymptomListProps = {
+  device: DeviceType;
+  onBack: () => void;
+  onSelect: (symptom: Symptom) => void;
+};
+
+function SymptomList({ device, onBack, onSelect }: Readonly<SymptomListProps>) {
+  const { data, loading, error, retry } = useLoad(() => fetchSymptoms(device.id), [device.id]);
+  return (
+    <ListScreen
+      title={`${device.name} symptoms`}
+      onBack={onBack}
+      loading={loading}
+      error={error}
+      onRetry={retry}
+      items={data}
+      empty="No symptoms yet."
+      onSelect={(id) => {
+        const symptom = data?.find((s) => s.id === id);
+        if (symptom) onSelect(symptom);
+      }}
+    />
+  );
+}
+
+type GuideListProps = {
+  symptom: Symptom;
+  onBack: () => void;
+  onSelect: (guide: Guide) => void;
+  onOnlyGuide: (guide: Guide) => void;
+};
+
+function GuideList({ symptom, onBack, onSelect, onOnlyGuide }: Readonly<GuideListProps>) {
+  const { data, loading, error, retry } = useLoad(() => fetchGuides(symptom.id), [symptom.id]);
+  const only = data?.length === 1 ? data[0] : null;
+
+  useEffect(() => {
+    if (only) onOnlyGuide(only);
+    // onOnlyGuide changes identity every render; `only` is the trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [only]);
+
+  return (
+    <ListScreen
+      title={symptom.name}
+      onBack={onBack}
+      loading={loading || only !== null}
+      error={error}
+      onRetry={retry}
+      items={
+        data?.map((g) => ({ id: g.id, label: g.title, note: KIND_LABEL[g.kind] })) ?? null
+      }
+      empty="No guides yet."
+      onSelect={(id) => {
+        const guide = data?.find((g) => g.id === id);
+        if (guide) onSelect(guide);
+      }}
+    />
+  );
+}

@@ -72,15 +72,16 @@ LunasTech/
     src/
       main.tsx, App.tsx, index.css (design tokens), vite-env.d.ts
       layout/                 Shell.tsx (fixed header, centered content column)
-      components/ui/          Button.tsx, TextField.tsx (plain Tailwind on tokens; shadcn not installed)
+      components/ui/          Button.tsx, TextField.tsx, BackButton.tsx, ChoiceList.tsx (plain Tailwind on tokens; shadcn not installed)
       features/auth/          AuthProvider, AuthFlow, LoginScreen, SignupScreen, ForgotPasswordScreen, ResetPasswordScreen, CheckEmailScreen, errors.ts, validation.ts
-      features/               guides, simulations, progress, admin (empty)
-      lib/                    supabase.ts (client), utils.ts (cn helper)
+      features/guides/        GuidesFlow, ListScreen, GuideScreen, api.ts, types.ts
+      features/               simulations, progress, admin (empty)
+      lib/                    supabase.ts (client), utils.ts (cn helper), useLoad.ts (async loader hook)
 ```
 
 **Module / Feature Map:**
 - auth -> Signup, login, email confirmation, session (Supabase Auth). Built, including forgot and reset password.
-- guides -> Device and symptom selection, matching guides, offline cache
+- guides -> Device and symptom selection, matching guides, step-by-step guide with saved progress. Built; offline cache not yet.
 - simulations -> Step simulation; scoring and feedback come from the submit_answer database function
 - progress -> Saved progress, completed simulations, learning level
 - admin -> Approving and publishing guides and scenarios
@@ -94,7 +95,10 @@ LunasTech/
 - features/simulations -> depends on -> start_simulation() and submit_answer() in the initial_schema migration (changing their names or return shape breaks it)
 - features/admin -> depends on -> admin_simulation_steps() and the admin row level security policies
 - recalculate_learning_level() -> depends on -> simulation_attempts.passed, guides.kind
-- src/App.tsx -> depends on -> features/auth (AuthProvider, AuthFlow, ResetPasswordScreen), layout/Shell.tsx, components/ui/Button.tsx
+- src/App.tsx -> depends on -> features/auth (AuthProvider, AuthFlow, ResetPasswordScreen), features/guides/GuidesFlow, layout/Shell.tsx, components/ui/Button.tsx
+- features/guides/api.ts -> depends on -> tables device_types, symptoms, guides, guide_steps, guide_progress in the initial_schema migration (renaming a column breaks it) and the row level security policies on them
+- features/guides/GuideScreen.tsx -> depends on -> features/auth/AuthProvider (user id for guide_progress), lib/useLoad.ts
+- features/guides/* -> depends on -> components/ui/* (BackButton, ChoiceList, Button), index.css tokens
 - features/auth/* -> depends on -> src/lib/supabase.ts, components/ui/*, index.css tokens
 - features/auth/CheckEmailScreen.tsx, SignupScreen.tsx and ForgotPasswordScreen.tsx -> depend on -> the Supabase "Confirm email" setting and redirect allow-list (see Auth configuration)
 - features/auth/AuthProvider.tsx (recovering, finishRecovery) -> used by -> App.tsx and ResetPasswordScreen; it reads type=recovery from the URL hash and the PASSWORD_RECOVERY event
@@ -135,3 +139,4 @@ AI: when the structure changes during the build, log it here.
 | 2026-10-06 | Added ForgotPasswordScreen and ResetPasswordScreen; CheckEmailScreen gained a purpose prop; AuthProvider gained recovering state | Decision #8 |
 
 ---
+| 2026-10-06 | Added features/guides, components/ui/BackButton + ChoiceList, lib/useLoad; App.tsx renders GuidesFlow when signed in | Decision #9 |

@@ -1,6 +1,7 @@
 import { AuthProvider, useAuth } from "@/features/auth/AuthProvider";
 import { AuthFlow } from "@/features/auth/AuthFlow";
 import { ResetPasswordScreen } from "@/features/auth/ResetPasswordScreen";
+import { GuidesFlow } from "@/features/guides/GuidesFlow";
 import { TextButton } from "@/components/ui/Button";
 import { Shell } from "@/layout/Shell";
 import { supabase } from "@/lib/supabase";
@@ -33,11 +34,9 @@ function Root() {
     );
   }
 
-  // Placeholder until the guides screen exists (next milestone).
   return (
     <Shell account={<TextButton onClick={() => supabase.auth.signOut()}>Log out</TextButton>}>
-      <h1 className="text-lg font-semibold">Signed in</h1>
-      <p className="text-base text-text-muted">{session.user.email}</p>
+      <GuidesFlow />
     </Shell>
   );
 }
