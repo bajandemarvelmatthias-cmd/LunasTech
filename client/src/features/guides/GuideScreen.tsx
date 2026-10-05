@@ -6,10 +6,10 @@ import { useLoad } from "@/lib/useLoad";
 import { fetchGuideSteps, fetchProgress, saveProgress } from "./api";
 import type { Guide, GuideProgress, GuideStep } from "./types";
 
-type Props = { guide: Guide; onBack: () => void };
+type Props = { guide: Guide; onBack: () => void; onFinished: () => void };
 
 // Loads the steps and the saved position, then hands over to the stepper.
-export function GuideScreen({ guide, onBack }: Readonly<Props>) {
+export function GuideScreen({ guide, onBack, onFinished }: Readonly<Props>) {
   const { data, loading, error, retry } = useLoad(
     async () => {
       const [steps, progress] = await Promise.all([
@@ -38,7 +38,7 @@ export function GuideScreen({ guide, onBack }: Readonly<Props>) {
         <p className="text-base text-text-muted">This guide has no steps yet.</p>
       )}
       {!loading && data && data.steps.length > 0 && (
-        <Stepper guideId={guide.id} steps={data.steps} progress={data.progress} onDone={onBack} />
+        <Stepper guideId={guide.id} steps={data.steps} progress={data.progress} onDone={onFinished} />
       )}
     </div>
   );

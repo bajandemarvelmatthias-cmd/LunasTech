@@ -313,3 +313,29 @@ needs a new dependency (no install was allowed this session).
 - Offline caching of opened guides is not built yet and is still required by the brief.
 - Simulations are not linked from a guide yet.
 - Not tested against a live Supabase project.
+
+### #10
+**Date:** 2026-10-06
+**Milestone:** Simulations (step scoring and feedback screen)
+
+**Context:**
+Decisions #3 and #4 fixed the scoring in database functions. The screen
+had to start an attempt, show steps, send answers and show the result without
+ever holding or computing a correct answer.
+
+**Options Considered:**
+- A: Finishing a guide opens its simulation automatically when there is exactly one; a list when there are several; nothing when there are none.
+- B: A separate "Start simulation" button on a completion screen after each guide.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation (automation first, constraints.md #2).
+
+**Decision:**
+Option A. Each step is one question with radio options and a "Check answer" button. The app sends only the option index to submit_answer and shows what comes back: correct or not, points, feedback, and on a second wrong answer the correct option. A first wrong answer disables that option so the second try is a different choice. At the last step the result screen shows Passed or Not passed, points out of steps x 2, and the learning level returned by the database. Not passed offers "Try again", which starts a new attempt. An unfinished attempt resumes at the first unresolved step. B is rejected: it adds a button for a step the system can take.
+
+**Consequences:**
+- The app never computes score, pass or level. It only displays the database's answer.
+- Leaving mid-simulation keeps the attempt; reopening resumes it. If the first try was already used, the screen says the first answer was wrong, without naming which option.
+- Options are assumed to be plain text strings (open-questions.md #16).
+- Not tested against a live Supabase project. submit_answer and start_simulation have also never been run (migration untested).
+- The result screen shows the learning level, but there is no progress screen yet.

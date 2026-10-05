@@ -3,15 +3,21 @@ import { useLoad } from "@/lib/useLoad";
 import { fetchDevices, fetchGuides, fetchSymptoms } from "./api";
 import { GuideScreen } from "./GuideScreen";
 import { ListScreen } from "./ListScreen";
+import { SimulationList } from "@/features/simulations/SimulationList";
+import { SimulationScreen } from "@/features/simulations/SimulationScreen";
+import type { Simulation } from "@/features/simulations/types";
 import { KIND_LABEL, type DeviceType, type Guide, type Symptom } from "./types";
 
 type Route =
   | { name: "devices" }
   | { name: "symptoms"; device: DeviceType }
   | { name: "guides"; device: DeviceType; symptom: Symptom }
-  | { name: "guide"; guide: Guide };
+  | { name: "guide"; guide: Guide }
+  | { name: "simulations"; guide: Guide }
+  | { name: "simulation"; simulation: Simulation };
 
-// Linear flow: device, symptom, matching guides, then the guide itself.
+// Linear flow: device, symptom, matching guides, the guide itself, then its
+// simulation (opened automatically when the guide has exactly one).
 // State-based like AuthFlow; there is no router yet, so the browser back
 // button leaves the app instead of going back one screen.
 export function GuidesFlow() {
@@ -20,6 +26,7 @@ export function GuidesFlow() {
   const push = (next: Route) => setStack((s) => [...s, next]);
   const pop = () => setStack((s) => s.slice(0, -1));
   const replace = (next: Route) => setStack((s) => [...s.slice(0, -1), next]);
+  const home = () => setStack([{ name: "devices" }]);
 
   switch (route.name) {
     case "devices":
@@ -43,7 +50,25 @@ export function GuidesFlow() {
         />
       );
     case "guide":
-      return <GuideScreen guide={route.guide} onBack={pop} />;
+      return (
+        <GuideScreen
+          guide={route.guide}
+          onBack={pop}
+          onFinished={() => replace({ name: "simulations", guide: route.guide })}
+        />
+      );
+    case "simulations":
+      return (
+        <SimulationList
+          guide={route.guide}
+          onBack={pop}
+          onSelect={(simulation) => push({ name: "simulation", simulation })}
+          onOnly={(simulation) => replace({ name: "simulation", simulation })}
+          onNone={pop}
+        />
+      );
+    case "simulation":
+      return <SimulationScreen simulation={route.simulation} onBack={pop} onExit={home} />;
   }
 }
 

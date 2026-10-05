@@ -38,6 +38,7 @@ Each question is tagged to the milestone where it must be resolved.
 |---|----------|-----------|-----------|
 | 3 | Which app icon for the PWA install? Needed before the app can be installed from a phone. Does not block building screens. | Before launch | [ ] |
 | 14 | Email delivery for auth: Supabase's built-in sender allows only 2 emails per hour for the whole project (checked 2026-10-05), so email confirmation and password reset will fail once more than a couple of people use them. Which SMTP provider will you use (any provider that sends through SMTP works)? Confirmation itself is decided, see resolved #15. | Before launch | [ ] |
+| 16 | Are simulation_steps.options plain text strings (for example ["Replace the screen", "Reset the phone"])? The simulation screen assumes this. The schema only checks that options is an array of 2 to 6 items. | Before the admin screens or any real simulation content | [ ] |
 
 ---
 ## HOW TO ADD A QUESTION (AI instructions)

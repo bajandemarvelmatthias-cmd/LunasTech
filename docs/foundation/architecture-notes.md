@@ -75,14 +75,15 @@ LunasTech/
       components/ui/          Button.tsx, TextField.tsx, BackButton.tsx, ChoiceList.tsx (plain Tailwind on tokens; shadcn not installed)
       features/auth/          AuthProvider, AuthFlow, LoginScreen, SignupScreen, ForgotPasswordScreen, ResetPasswordScreen, CheckEmailScreen, errors.ts, validation.ts
       features/guides/        GuidesFlow, ListScreen, GuideScreen, api.ts, types.ts
-      features/               simulations, progress, admin (empty)
+      features/simulations/   SimulationList, SimulationScreen, api.ts, types.ts
+      features/               progress, admin (empty)
       lib/                    supabase.ts (client), utils.ts (cn helper), useLoad.ts (async loader hook)
 ```
 
 **Module / Feature Map:**
 - auth -> Signup, login, email confirmation, session (Supabase Auth). Built, including forgot and reset password.
 - guides -> Device and symptom selection, matching guides, step-by-step guide with saved progress. Built; offline cache not yet.
-- simulations -> Step simulation; scoring and feedback come from the submit_answer database function
+- simulations -> Step simulation; scoring and feedback come from the submit_answer database function. Built; opened from the end of a guide.
 - progress -> Saved progress, completed simulations, learning level
 - admin -> Approving and publishing guides and scenarios
 - layout -> Persistent header and navigation shell
@@ -93,6 +94,8 @@ LunasTech/
 - src/lib/supabase.ts -> depends on -> client/.env (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
 - every feature -> depends on -> src/lib/supabase.ts, src/layout
 - features/simulations -> depends on -> start_simulation() and submit_answer() in the initial_schema migration (changing their names or return shape breaks it)
+- features/simulations/* -> depends on -> tables simulations, simulation_steps (only id, position, prompt, options are readable by users), step_results; features/guides/ListScreen.tsx; lib/useLoad.ts
+- features/guides/GuidesFlow.tsx -> depends on -> features/simulations (SimulationList, SimulationScreen); GuideScreen's onFinished leads into them
 - features/admin -> depends on -> admin_simulation_steps() and the admin row level security policies
 - recalculate_learning_level() -> depends on -> simulation_attempts.passed, guides.kind
 - src/App.tsx -> depends on -> features/auth (AuthProvider, AuthFlow, ResetPasswordScreen), features/guides/GuidesFlow, layout/Shell.tsx, components/ui/Button.tsx
@@ -140,3 +143,4 @@ AI: when the structure changes during the build, log it here.
 
 ---
 | 2026-10-06 | Added features/guides, components/ui/BackButton + ChoiceList, lib/useLoad; App.tsx renders GuidesFlow when signed in | Decision #9 |
+| 2026-10-06 | Added features/simulations; GuideScreen gained onFinished; GuidesFlow gained simulations and simulation routes | Decision #10 |
