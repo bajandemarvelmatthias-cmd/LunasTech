@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useHistoryStack } from "@/lib/useHistoryStack";
 import { useLoad } from "@/lib/useLoad";
 import { fetchDevices, fetchGuides, fetchSymptoms } from "./api";
 import { GuideScreen } from "./GuideScreen";
@@ -18,15 +19,10 @@ type Route =
 
 // Linear flow: device, symptom, matching guides, the guide itself, then its
 // simulation (opened automatically when the guide has exactly one).
-// State-based like AuthFlow; there is no router yet, so the browser back
-// button leaves the app instead of going back one screen.
+// State-based like AuthFlow. The browser back button goes back one screen
+// (lib/useHistoryStack.ts); the URL does not change.
 export function GuidesFlow() {
-  const [stack, setStack] = useState<Route[]>([{ name: "devices" }]);
-  const route = stack[stack.length - 1];
-  const push = (next: Route) => setStack((s) => [...s, next]);
-  const pop = () => setStack((s) => s.slice(0, -1));
-  const replace = (next: Route) => setStack((s) => [...s.slice(0, -1), next]);
-  const home = () => setStack([{ name: "devices" }]);
+  const { current: route, push, pop, replace, reset: home } = useHistoryStack<Route>({ name: "devices" });
 
   switch (route.name) {
     case "devices":
@@ -80,7 +76,7 @@ function DeviceList({ onSelect }: Readonly<{ onSelect: (device: DeviceType) => v
       loading={loading}
       error={error}
       onRetry={retry}
-      items={data}
+      items={data?.map((d) => ({ id: d.id, label: d.name })) ?? null}
       empty="No devices yet."
       onSelect={(id) => {
         const device = data?.find((d) => d.id === id);
@@ -105,7 +101,7 @@ function SymptomList({ device, onBack, onSelect }: Readonly<SymptomListProps>) {
       loading={loading}
       error={error}
       onRetry={retry}
-      items={data}
+      items={data?.map((s) => ({ id: s.id, label: s.name })) ?? null}
       empty="No symptoms yet."
       onSelect={(id) => {
         const symptom = data?.find((s) => s.id === id);

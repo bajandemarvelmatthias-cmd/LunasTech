@@ -14,7 +14,12 @@ export function GuideScreen({ guide, onBack, onFinished }: Readonly<Props>) {
     async () => {
       const [steps, progress] = await Promise.all([
         fetchGuideSteps(guide.id),
-        fetchProgress(guide.id),
+        // Offline, the saved position cannot be read; start at step 1 rather
+        // than block a guide that is cached. Online errors still surface.
+        fetchProgress(guide.id).catch((e: unknown) => {
+          if (navigator.onLine) throw e;
+          return null;
+        }),
       ]);
       return { steps, progress };
     },

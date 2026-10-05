@@ -36,9 +36,8 @@ Each question is tagged to the milestone where it must be resolved.
 
 | # | Question | Milestone | Answered? |
 |---|----------|-----------|-----------|
-| 3 | Which app icon for the PWA install? Needed before the app can be installed from a phone. Does not block building screens. | Before launch | [ ] |
+| 3 | Which app icon for the PWA install? A PLACEHOLDER (flat green square, white L; client/public/icon-192.png, icon-512.png, icon-maskable-512.png) was added on 2026-10-06 so install can be tested. The real icon is still needed before launch: replace those three files, same names and sizes. | Before launch | [ ] |
 | 14 | Email delivery for auth: Supabase's built-in sender allows only 2 emails per hour for the whole project (checked 2026-10-05), so email confirmation and password reset will fail once more than a couple of people use them. Which SMTP provider will you use (any provider that sends through SMTP works)? Confirmation itself is decided, see resolved #15. | Before launch | [ ] |
-| 16 | Are simulation_steps.options plain text strings (for example ["Replace the screen", "Reset the phone"])? The simulation screen assumes this. The schema only checks that options is an array of 2 to 6 items. | Before the admin screens or any real simulation content | [ ] |
 
 ---
 ## HOW TO ADD A QUESTION (AI instructions)
@@ -77,3 +76,4 @@ Answered questions live here permanently as part of project history.
 | 12 | Exact green shade and typeface? | Accent #15803d (pressed #166534) with white text, Inter at weights 400 and 600, bundled. See decision-log.md #5 | Before any UI is built |
 | 13 | Mobile or desktop layout? | One responsive site designed for phones first, scaled up for desktop, installable as a PWA. See decision-log.md #6 | Before any UI is built |
 | 15 | Do users confirm their email at signup? | Yes. See decision-log.md #7 | Signup and login |
+| 16 | Are simulation_steps.options plain text strings (for example ["Replace the screen", "Reset the phone"])? | NOT answered directly. Asked twice (once as a tap question); the human replied "continue your recommendations" both times, so the AI's recommendation was adopted on 2026-10-06: plain text strings. Treat as a delegated default. If real content uses another shape, the simulation screen and the simulation admin editor (features/admin/SimulationAdmin.tsx) both need to change. | Before the admin screens or any real simulation content |

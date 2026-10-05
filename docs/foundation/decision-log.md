@@ -364,3 +364,126 @@ Option A. Tab icons are Phosphor BookOpen (Guides) and ChartLineUp (Progress), a
 - A guide shows "Completed" or its saved step number. A simulation shows Passed if any finished attempt passed, otherwise Not passed.
 - Admin navigation is not added yet. It joins the tab list when the admin area is built.
 - Not tested against a live Supabase project; the embedded titles in the queries rely on the foreign keys in the migration.
+
+### #12
+**Date:** 2026-10-06
+**Milestone:** Offline guide caching
+
+**Context:**
+The brief requires previously opened guides to work offline. The service worker already caches the app shell (vite-plugin-pwa defaults), but guide content comes from Supabase and was not stored.
+
+**Options Considered:**
+- A: Service worker runtime caching (workbox NetworkFirst) of the four read-only content tables: device_types, symptoms, guides, guide_steps. No screen changes.
+- B: App-level cache (IndexedDB or localStorage) written inside features/guides/api.ts, read back when a request fails.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation (automation first, constraints.md #2; no new dependency, no new UI).
+
+**Decision:**
+Option A. Configured in client/vite.config.ts. Online, the newest content is fetched and saved; offline or after 5 seconds without an answer, the saved copy is used. Anything opened once is available offline, with no download button. Progress, profile and simulation requests are never cached. The offline read of guide_progress falls back to "start at step 1" only when the browser reports it is offline. B is rejected: it duplicates what the service worker already does and puts caching code in every fetch function.
+
+**Consequences:**
+- The urlPattern function is copied into the service worker as text. It must not use variables defined outside it, and its table names must match features/guides/api.ts.
+- Only screens the user opened while online are available offline. A device or symptom list never visited has no saved copy.
+- Saved guide content stays on the device after sign out (it is not personal data).
+- Progress cannot be saved offline; the existing "Progress could not be saved" message appears. Finishing a guide offline does not open the simulation.
+- Not testable here: the uploaded node_modules holds Windows-only binaries, so no build or service worker run was done. Typecheck passes. Test with `npm run build && npm run preview`, open a guide, then go offline in DevTools.
+- Installing the app from a phone still needs the icon (open-questions.md #3).
+
+### #13
+**Date:** 2026-10-06
+**Milestone:** Browser back button
+
+**Context:**
+Decision #9 deferred a router and noted that the back button leaves the app. Open-questions #16 still blocks the admin screens, so this was the one unblocked milestone left. No install can be run in the build environment.
+
+**Options Considered:**
+- A: Keep the screen stack in state and mirror it in the browser history (History API). Back goes back one screen. No new dependency, URLs unchanged.
+- B: Add react-router so every screen has its own URL. Needs a new dependency, a vercel.json rewrite for direct links, and screens that load their device, symptom, guide or simulation from the URL instead of receiving it whole.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation (smallest change that fixes the stated problem).
+
+**Decision:**
+Option A. New hook lib/useHistoryStack.ts, used by GuidesFlow. Each push adds a history entry; the on-screen Back and the browser back both remove one screen; leaving a finished simulation returns to the first screen in one step. B is deferred, not rejected: it is the way to get shareable links and reload-in-place, and the brief asks for neither.
+
+**Consequences:**
+- Reloading returns to the device list, as before. There are no deep links.
+- A forward navigation to a screen that no longer exists is undone automatically.
+- Tabs are not history entries. Pressing back while on the Progress tab removes a hidden Guides screen; the user sees it when they return to Guides.
+- Pressing back on the first Guides screen leaves the app, as browsers normally do.
+- AuthFlow screens still have no back-button support. Not done, not requested.
+- Typecheck passes. Not run in a browser.
+
+### #14
+**Date:** 2026-10-06
+**Milestone:** Admin area, guides only
+
+**Context:**
+The brief requires that an admin can publish guides and scenarios. Open question #16 (the shape of simulation_steps.options) blocks the simulation part, so the human was offered a guides-only first step and asked for my recommendation, which was to build it. #16 stays open and nothing here touches simulations.
+
+**Options Considered:**
+- A: An Admin tab, shown only to admins, with a list of all guides (drafts included) and one editor: title, symptom, kind, steps, Save, Publish or Move to drafts, plus a small "New symptom" form (the symptoms table starts empty and every guide needs one).
+- B: Manage content in the Supabase dashboard or SQL until the full admin is built.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation (the brief's "done" list requires an admin, and the schema already has the admin policies, so no schema change).
+
+**Decision:**
+Option A. Admin status is read from profiles.role to show the tab; the database policies (is_admin()) enforce every write. Publishing is a human action: Publish saves first, then sets status; it needs at least one step. Steps can be edited in place, added at the end, or removed from the end only. That keeps unique (guide_id, position) safe without a database function; reordering or removing from the middle needs one and is a schema change, so it was not done. No delete for guides (unpublish instead). B is rejected: the brief asks for an admin screen.
+
+**Consequences:**
+- Simulation admin (scenarios, options, correct answer, feedback) is not built. It needs #16 answered and admin_simulation_steps(). Until then, simulations are created in SQL.
+- New components: components/ui/TextArea and Select; ListScreen gained an optional action slot.
+- The Admin flow does not follow the browser back button (it would clash with the Guides stack that is mounted at the same time). It has its own Back.
+- Leaving the editor discards unsaved edits without asking.
+- Roles are still set only in the Supabase dashboard (decision #3). The first admin must be set there.
+- Admin queries on guides, symptoms and guide_steps pass through the offline cache from #12; online responses are always fresh.
+- Not run against a live Supabase project (the migration is still untested). Typecheck passes.
+
+### #15
+**Date:** 2026-10-06
+**Milestone:** Admin area, simulations
+
+**Context:**
+Decision #14 left simulation admin out because open-questions #16 (the shape of simulation_steps.options) was unanswered. The human did not answer it, twice, and asked for the AI's recommendation each time. The recommendation (plain text strings) matches what the simulation screen already assumed. This is recorded in open-questions.md as delegated, not as the human's own answer.
+
+**Options Considered:**
+- A: Build the simulation admin now with plain text options, as a screen reached from the guide editor ("Simulations").
+- B: Keep creating simulations in SQL until the human answers #16.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation (the brief's "done" list needs admins to publish scenarios).
+
+**Decision:**
+Option A. From a saved guide: Simulations, then a list of that guide's simulations, then an editor (title; steps with a question, 2 to 6 text options, the correct answer, feedback; Save; Publish or Move to drafts). Same step rules as #14: edit in place, add at the end, remove from the end. Admins read answers through admin_simulation_steps(); inserts and updates on simulation_steps never ask for the row back (hidden columns, #3). The editor enforces the database limits (2 to 6 options, correct answer one of them). B is rejected: the human asked twice to continue and the change is easy to undo.
+
+**Consequences:**
+- If the human later says options have another shape, only the admin editor and the simulation screen change.
+- Users see a simulation only when it and its guide are both published. The admin screens do not warn about a published simulation under a draft guide.
+- A published simulation that already has attempts can be edited. Changing its steps or correct answer affects later attempts only through the database functions; old results are not rewritten.
+- Removing a step that has results deletes those results (foreign key on delete cascade). The editor does not warn.
+- Opening Simulations from the guide editor discards unsaved guide edits.
+- Not run against a live Supabase project; the migration is still untested. Typecheck passes.
+
+### #16
+**Date:** 2026-10-06
+**Milestone:** Admin safety prompts (amends the consequences of #14 and #15)
+
+**Context:**
+Decisions #14 and #15 listed three gaps: leaving an admin editor discards unsaved edits silently, opening Simulations from the guide editor does the same, and removing a simulation step deletes users' results for it without warning. The human asked to continue with the AI's recommendations.
+
+**Options Considered:**
+- A: The browser's built-in confirm dialog at those points. No new component.
+- B: A custom confirmation modal component.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation (smallest change, familiar platform pattern).
+
+**Decision:**
+Option A. "Discard your unsaved changes?" when leaving either editor or opening Simulations with unsaved edits. "Removing this step also deletes users' results for it. Remove anyway?" when saving a simulation that drops saved steps. B is deferred: switch to it if the native dialog looks out of place.
+
+**Consequences:**
+- The first two items in #14 and #15's lists no longer apply; the step-removal warning replaces the third. A published simulation under a draft guide still gets no hint.
+- Admin editors track unsaved edits in a ref set by the form and read by the screen's Back button. A new editing path must call the form's touch/edited helper or it will not count as unsaved.
+- Typecheck passes. Not run in a browser.

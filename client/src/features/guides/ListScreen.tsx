@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { BackButton } from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/Button";
 import { ChoiceList, type Choice } from "@/components/ui/ChoiceList";
@@ -11,6 +12,8 @@ type Props = {
   items: Choice[] | null;
   empty: string;
   onSelect: (id: string) => void;
+  // Optional control shown under the list (admin: "New guide").
+  action?: ReactNode;
 };
 
 // One list step of the guide flow: loading, error, empty or the list.
@@ -23,6 +26,7 @@ export function ListScreen({
   items,
   empty,
   onSelect,
+  action,
 }: Readonly<Props>) {
   let body;
   if (loading) {
@@ -47,6 +51,7 @@ export function ListScreen({
       {onBack && <BackButton onClick={onBack} />}
       <h1 className="text-lg font-semibold">{title}</h1>
       {body}
+      {action}
     </div>
   );
 }

@@ -66,27 +66,28 @@ LunasTech/
   .gitignore
   docs/foundation/            project rules and decisions
   supabase/migrations/        20261005000000_initial_schema.sql (approved, not yet run)
+  supabase/tests/             smoke_test.sql (paste into the Supabase SQL editor after the migration; rolls back; not yet run)
   client/
     index.html, vite.config.ts, tsconfig*.json, package.json, .env.example
-    public/                   static files (PWA icons go here)
+    public/                   PWA icons (PLACEHOLDERS: icon-192.png, icon-512.png, icon-maskable-512.png; open-questions #3)
     src/
       main.tsx, App.tsx, index.css (design tokens), vite-env.d.ts
       layout/                 Shell.tsx (fixed header, centered content column, tab navigation)
-      components/ui/          Button.tsx, TextField.tsx, BackButton.tsx, ChoiceList.tsx (plain Tailwind on tokens; shadcn not installed)
+      components/ui/          Button.tsx, TextField.tsx, TextArea.tsx, Select.tsx, BackButton.tsx, ChoiceList.tsx (plain Tailwind on tokens; shadcn not installed)
       features/auth/          AuthProvider, AuthFlow, LoginScreen, SignupScreen, ForgotPasswordScreen, ResetPasswordScreen, CheckEmailScreen, errors.ts, validation.ts
       features/guides/        GuidesFlow, ListScreen, GuideScreen, api.ts, types.ts
       features/simulations/   SimulationList, SimulationScreen, api.ts, types.ts
       features/progress/      ProgressScreen, api.ts
-      features/               admin (empty)
-      lib/                    supabase.ts (client), utils.ts (cn helper), useLoad.ts (async loader hook)
+      features/admin/         AdminFlow, GuideEditor, SimulationAdmin, api.ts, types.ts
+      lib/                    supabase.ts (client), utils.ts (cn helper), useLoad.ts (async loader hook), useHistoryStack.ts (screen stack tied to browser back)
 ```
 
 **Module / Feature Map:**
 - auth -> Signup, login, email confirmation, session (Supabase Auth). Built, including forgot and reset password.
-- guides -> Device and symptom selection, matching guides, step-by-step guide with saved progress. Built; offline cache not yet.
+- guides -> Device and symptom selection, matching guides, step-by-step guide with saved progress. Built; offline cache via service worker (decision #12, untested in a browser).
 - simulations -> Step simulation; scoring and feedback come from the submit_answer database function. Built; opened from the end of a guide.
 - progress -> Saved progress, completed simulations, learning level. Built (read-only display).
-- admin -> Approving and publishing guides and scenarios
+- admin -> Guides and simulations: list, create, edit, publish (decisions #14, #15). Reached through the Admin tab, admins only.
 - layout -> Persistent header and navigation shell. Tabs: Guides, Progress. Bottom bar on phones, top bar from md up.
 
 **Key Dependencies Between Files:**
@@ -98,10 +99,12 @@ LunasTech/
 - features/simulations/* -> depends on -> tables simulations, simulation_steps (only id, position, prompt, options are readable by users), step_results; features/guides/ListScreen.tsx; lib/useLoad.ts
 - features/progress/api.ts -> depends on -> profiles.learning_level, guide_progress, simulation_attempts (with embedded guides and simulations titles) in the initial_schema migration
 - layout/Shell.tsx (nav, NavTab) -> used by -> App.tsx; --size-tab-bar token in index.css; the main area bottom padding on phones depends on it
-- features/guides/GuidesFlow.tsx -> depends on -> features/simulations (SimulationList, SimulationScreen); GuideScreen's onFinished leads into them
-- features/admin -> depends on -> admin_simulation_steps() and the admin row level security policies
+- features/guides/GuidesFlow.tsx -> depends on -> lib/useHistoryStack.ts (owns the screen stack and history entries); features/simulations (SimulationList, SimulationScreen); GuideScreen's onFinished leads into them
+- vite.config.ts (workbox runtimeCaching) -> depends on -> table names in features/guides/api.ts (device_types, symptoms, guides, guide_steps); the cached tables are listed inside the urlPattern function
+- features/admin -> depends on -> profiles.role (tab visibility), the admin row level security policies on device_types, symptoms, guides, guide_steps, and the unique (guide_id, position) constraint; features/guides (api fetchGuideSteps and fetchDevices, ListScreen, types); components/ui/*
+- features/admin/SimulationAdmin.tsx and api.ts (simulation functions) -> depend on -> admin_simulation_steps(), tables simulations and simulation_steps (column privileges and check constraints: 2 to 6 options, correct_option in range, unique (simulation_id, position)); the options-as-text assumption shared with features/simulations (open-questions #16)
 - recalculate_learning_level() -> depends on -> simulation_attempts.passed, guides.kind
-- src/App.tsx -> depends on -> features/auth (AuthProvider, AuthFlow, ResetPasswordScreen), features/guides/GuidesFlow, features/progress/ProgressScreen, layout/Shell.tsx, components/ui/Button.tsx
+- src/App.tsx -> depends on -> features/admin (AdminFlow, fetchIsAdmin; the Admin tab appears only for admins); features/auth (AuthProvider, AuthFlow, ResetPasswordScreen), features/guides/GuidesFlow, features/progress/ProgressScreen, layout/Shell.tsx, components/ui/Button.tsx
 - features/guides/api.ts -> depends on -> tables device_types, symptoms, guides, guide_steps, guide_progress in the initial_schema migration (renaming a column breaks it) and the row level security policies on them
 - features/guides/GuideScreen.tsx -> depends on -> features/auth/AuthProvider (user id for guide_progress), lib/useLoad.ts
 - features/guides/* -> depends on -> components/ui/* (BackButton, ChoiceList, Button), index.css tokens
@@ -148,3 +151,9 @@ AI: when the structure changes during the build, log it here.
 | 2026-10-06 | Added features/guides, components/ui/BackButton + ChoiceList, lib/useLoad; App.tsx renders GuidesFlow when signed in | Decision #9 |
 | 2026-10-06 | Added features/simulations; GuideScreen gained onFinished; GuidesFlow gained simulations and simulation routes | Decision #10 |
 | 2026-10-06 | Added features/progress; Shell gained a nav prop (bottom tab bar on phones, header tabs from md up); App.tsx gained SignedIn with Guides and Progress tabs | Decision #11 |
+| 2026-10-06 | vite.config.ts gained workbox runtimeCaching (guide-content cache); GuideScreen reads progress offline-safe; GuidesFlow device/symptom lists now map name to label | Decision #12 |
+| 2026-10-06 | Added lib/useHistoryStack.ts; GuidesFlow uses it instead of its own state stack | Decision #13 |
+| 2026-10-06 | Added features/admin (guides only), components/ui TextArea and Select; ListScreen gained an action slot; App.tsx shows an Admin tab for admins | Decision #14 |
+| 2026-10-06 | Added features/admin/SimulationAdmin.tsx; AdminFlow gained sims and sim routes; GuideEditor gained an onSimulations link | Decision #15 |
+| 2026-10-06 | Added supabase/tests/smoke_test.sql (scoring, hidden answers, admin rights; rolls back) | Migration was untested and no database was available to run it |
+| 2026-10-06 | Added placeholder PWA icons, manifest icons and an apple-touch-icon link | So installing can be tested; real icon still open (open-questions #3) |
