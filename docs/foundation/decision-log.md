@@ -1,0 +1,251 @@
+# decision-log.md
+
+---
+## AI RULES — READ FULLY BEFORE ANY ACTION
+---
+
+1. Read all existing entries before suggesting anything already decided.
+2. Never re-debate a logged decision. If it needs revisiting → flag it,
+   don't silently override it.
+3. At every major milestone → add an entry before continuing.
+4. Before logging anything, apply this filter — if ALL three are false, skip it:
+   - Hard to reverse?
+   - Affects other parts of the system?
+   - Confusing without an explanation?
+5. Before presenting options at a milestone → search current community
+   consensus on each direction. Present findings, then wait for human
+   decision before logging.
+6. If two directions were discussed with the human → both get logged,
+   with the reason the chosen path was taken.
+
+---
+## DECISION ENTRIES
+---
+
+### #1
+**Date:** 2026-10-05
+**Milestone:** Project start - technology stack
+
+**Context:**
+The product is a progressive web app for about 5000 users, with login,
+guides, simulations, learning progress and an admin area. The UI uses
+shadcn, which requires React. A frontend build approach and a database
+had to be chosen.
+
+**Options Considered:**
+- Frontend A: Vite + React + TypeScript, service worker via vite-plugin-pwa
+- Frontend B: Next.js (with a PWA plugin such as Serwist)
+- Database A: SQLite on a single server
+- Database B: PostgreSQL (managed hosting)
+
+**Community Consensus:**
+(searched 2026-10-05)
+- Frontend: Vite has effectively replaced Create React App as the
+  default React build tool. Next.js adds server rendering and can
+  support offline PWAs, but one developer team reported it added
+  friction for a fully offline PWA and moved to plain React.
+- Database: one 2026 comparison favors SQLite for single-server apps
+  under roughly 10,000 daily active users, and PostgreSQL once
+  concurrent writes, multiple servers or a larger team are involved.
+  Another guide calls PostgreSQL the default pick in 2026. Managed
+  PostgreSQL costs roughly $20 to $25 a month, with free tiers available.
+
+**Decision:**
+Frontend A (Vite + React + TypeScript) and Database B (PostgreSQL),
+with a Node + TypeScript backend. Chosen because the app does not need
+server rendering, and learning progress and simulation results are
+written continuously, so PostgreSQL avoids a later migration.
+The human accepted this on 2026-10-05.
+
+**Consequences:**
+- shadcn is configured to use Phosphor icons instead of its default
+  icon set, and to use the project's design tokens (8px/16px radius,
+  400/600 weights, no gradients).
+- Offline behavior is handled by the service worker, not by the server.
+- PostgreSQL needs a hosted instance; SQLite remains a fallback only
+  if the human prefers a single-server setup.
+- Backend framework and auth approach are still to be decided.
+
+---
+
+### #2
+**Date:** 2026-10-05
+**Milestone:** Backend approach (after hosting was named: Vercel and Supabase)
+
+**Context:**
+The human already uses Vercel and Supabase. The stack in #1 assumed a
+separate Node + TypeScript backend and an undecided host and login method.
+
+**Options Considered:**
+- A: Supabase for database, login, roles and app logic. Vercel only hosts the app.
+- B: A custom Node API on top of Supabase.
+- C: Custom login code.
+
+**Community Consensus:**
+(searched 2026-10-05) Supabase Auth with row level security is the common
+choice for apps of this size. Many projects add a Node API on top, mainly
+for custom server logic.
+
+**Decision:**
+Option A. Supabase Auth handles signup, login and sessions. User and admin
+roles are enforced by row level security. Step scoring and learning level
+go in database functions first. Vercel serverless functions are added later
+only if something cannot live in the database. B and C are rejected: no
+custom server logic is needed yet, and custom login adds risk with no gain.
+
+**Consequences:**
+- Supersedes the Node backend and undecided auth/host in #1. The database
+  is still PostgreSQL, hosted by Supabase.
+- server/ and shared/ folders are not created. supabase/migrations/ holds
+  the database setup. Types will come from the database.
+- client/.env.example lists the two Supabase values the app needs.
+- The free plan pauses after a week of inactivity. See open-questions.md #1.
+
+### #3
+**Date:** 2026-10-05
+**Milestone:** Database schema
+
+**Context:**
+Tables and security rules were needed for profiles, devices, symptoms,
+guides, simulations and progress. The first proposal could not score a
+step because simulation steps had no answer options.
+
+**Options Considered:**
+- A: Clients write scores, attempts and level directly, protected by row level security.
+- B: Clients only call database functions; scoring and level are computed in the database.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation and accepted by the human.
+
+**Decision:**
+Option B. Schema file: supabase/migrations/20261005000000_initial_schema.sql.
+Simulation steps hold options, correct_option and feedback. Signed-in users
+cannot read correct_option or feedback (column privileges); the scoring
+function reads them. Admins read them through admin_simulation_steps().
+Users can change only their display name. Role and learning_level cannot be
+changed from the app. A is rejected: a client could award itself full marks.
+
+**Consequences:**
+- Clients call start_simulation(simulation_id) and submit_answer(attempt_id, step_id, chosen).
+- Admin inserts into simulation_steps cannot use "return the new row" for the hidden columns.
+- Roles are changed only in the Supabase dashboard or with the service key.
+- The migration has not been run or tested yet.
+
+### #4
+**Date:** 2026-10-05
+**Milestone:** Scoring and learning level
+
+**Context:**
+The brief requires automatic step scoring with immediate feedback and an
+automatic learning level, but gave no rules.
+
+**Options Considered:**
+- A: Simple fixed rules: multiple-choice steps, points by number of tries, level from passed simulations.
+- B: Weighted or timed scoring with streaks and difficulty weighting.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation and accepted by the human.
+
+**Decision:**
+Option A. Each step is multiple choice with one correct answer. Correct on
+the first try is 2 points, on the second try 1 point. A second wrong answer
+shows the answer and scores 0. A step must be resolved before the next.
+A simulation passes at 80% or more of (steps x 2) points. Learning level
+counts each passed simulation once (small fix 1 point, major repair 2):
+level 0 below 1 point, 1 at 1, 2 at 3, 3 at 6, 4 at 10 or more. The database
+recalculates it each time an attempt completes. B is rejected: the brief does
+not ask for it and each rule adds maintenance.
+
+**Consequences:**
+- Thresholds and the 80% pass mark live in one function each (recalculate_learning_level, submit_answer) and are easy to change.
+- A retaken simulation never adds level points twice.
+- Timing, streaks and difficulty weighting are out of scope.
+
+### #5
+**Date:** 2026-10-05
+**Milestone:** Visual identity (before any UI)
+
+**Context:**
+The guidelines require references before building UI, and green was chosen
+as the accent family. The shade and typeface were open. The placeholder
+green (#16a34a) gave only 3.3:1 contrast with white text.
+
+**Options Considered:**
+- Accent A: #15803d deep green, white text (5.0:1)
+- Accent B: #58cc02 (Duolingo Feather Green), dark text needed (white is 2.1:1)
+- Accent C: #9fe870 (Wise lime), dark text needed (9.5:1)
+- Typeface A: Inter, bundled. Typeface B: system font stack.
+
+**Community Consensus:**
+(searched 2026-10-05) References: iFixit (guide format: introduction, then
+one step at a time with 4:3 photos), Duolingo (green for active and done,
+grey for locked; its shadows and heavy type rejected), Wise (one green used
+for buttons and accents only, surface contrast instead of shadows). Sources
+were written summaries of these design systems, not their actual screens,
+except Duolingo's official color page.
+
+**Decision:**
+Accent A (#15803d, pressed #166534, white text) and Typeface A (Inter,
+weights 400 and 600, bundled for offline use). Chosen because B and C force
+dark text on buttons, and Inter is the closest free match to the clean look
+of the references. The human approved this on 2026-10-05.
+
+**Consequences:**
+- Tokens in client/src/index.css are final for color and font. Changing them needs approval.
+- The accent is used only for buttons, active states and progress, per the 60/30/10 rule.
+- The app icon is still open (open-questions.md #3).
+
+### #6
+**Date:** 2026-10-05
+**Milestone:** Platform layout (before any UI)
+
+**Context:**
+The brief calls for a mobile-based app delivered as a progressive web app.
+The question was whether the website and the installed app need separate
+designs, and whether desktop gets its own layout.
+
+**Options Considered:**
+- A: One responsive site, phone first, scaled up for desktop, installable as a PWA.
+- B: A phone design plus a separate desktop design.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation and accepted by the human.
+
+**Decision:**
+Option A. Navigation is a bottom tab bar on phones and a top bar on wider
+screens, per ux-ui-guidelines.md. No sidebar and no separate desktop design.
+The installed app is the same site. B is rejected: two designs double the
+build and testing work for no stated need.
+
+**Consequences:**
+- Every screen is designed and checked at phone width first, then desktop.
+- Auth and other single-purpose screens use a centered column at every width.
+- The layout shell changes its navigation by breakpoint but keeps fixed header dimensions.
+
+### #7
+**Date:** 2026-10-05
+**Milestone:** Signup and login (first UI)
+
+**Context:**
+The brief requires signup and login. The guidelines require a flow type and
+references before building. Whether users must confirm their email changes
+the signup flow, so it had to be decided first.
+
+**Options Considered:**
+- A: Email confirmation required. Signup ends on a "Check your email" screen and the account works after the link is opened.
+- B: No confirmation for now. The account works at once; confirmation is added before launch.
+
+**Community Consensus:**
+(searched 2026-10-05) References were written summaries, not the actual screens: Google sign-in (one focused task per screen), Basecamp (email and password only), and sign-up guides covering show-password, visible forgot-password link, no autofocus, large tap targets. Social login is common in the references but is not in the brief.
+
+**Decision:**
+Option A. Email and password only. Minimum password length 8. Sign up and Log in are separate screens linked by one text link each. Social login is left out. Forgot password is not built yet, so the screens have no link to it; it is the next auth task. The human approved email confirmation on 2026-10-05.
+
+**Consequences:**
+- The Supabase project must have "Confirm email" on, with the site URL in Supabase's redirect allow-list (see architecture-notes.md, Auth configuration).
+- Supabase's built-in sender allows 2 emails per hour for the whole project, so signup breaks under real use until an SMTP provider is set (open-questions.md #14).
+- Password minimum is enforced in the app (8). The Supabase project setting defaults to 6 and should be raised to 8 so both agree.
+- A login attempt on an unconfirmed account moves to the "Check your email" screen with a resend button (60 second wait).
+- Signing up with an address that already exists shows an "account already exists" message.
+- Components are plain Tailwind built on the tokens. shadcn is not installed yet, so they can be swapped later (decision #1).
+

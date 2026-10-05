@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+/*
+  Design tokens. Source of truth: docs/foundation/ux-ui-guidelines.md.
+  Flat color only. No gradients, glows or single-side borders.
+  Accent and typeface approved: decision-log.md #5.
+*/
+@theme {
+  /* Color: 60 surface, 30 secondary surface, 10 accent */
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f5f5f5;
+  --color-text: #171717;
+  --color-text-muted: #595959;
+  --color-border: #e0e0e0;
+  --color-accent: #15803d;
+  --color-accent-hover: #166534;
+  --color-accent-text: #ffffff;
+  --color-danger: #b91c1c;
+
+  /* Radius: only two values */
+  --radius-md: 8px;
+  --radius-lg: 16px;
+
+  /* Type: 3 sizes, 2 weights */
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.5rem;
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+
+  /* Component dimensions (8px grid) */
+  --size-header: 64px;
+  --size-tab-bar: 64px;
+  --size-control: 48px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-regular);
+}
