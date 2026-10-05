@@ -17,4 +17,5 @@ jobs:
         with:
           node-version: 20
       - run: npm install --no-audit --no-fund
+      - run: npm install --no-save eslint@9 @eslint/js@9 typescript-eslint eslint-plugin-react-hooks globals
       - run: npm run lint
