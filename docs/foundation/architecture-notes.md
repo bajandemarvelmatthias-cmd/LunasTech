@@ -71,12 +71,13 @@ LunasTech/
     public/                   static files (PWA icons go here)
     src/
       main.tsx, App.tsx, index.css (design tokens), vite-env.d.ts
-      layout/                 Shell.tsx (fixed header, centered content column)
+      layout/                 Shell.tsx (fixed header, centered content column, tab navigation)
       components/ui/          Button.tsx, TextField.tsx, BackButton.tsx, ChoiceList.tsx (plain Tailwind on tokens; shadcn not installed)
       features/auth/          AuthProvider, AuthFlow, LoginScreen, SignupScreen, ForgotPasswordScreen, ResetPasswordScreen, CheckEmailScreen, errors.ts, validation.ts
       features/guides/        GuidesFlow, ListScreen, GuideScreen, api.ts, types.ts
       features/simulations/   SimulationList, SimulationScreen, api.ts, types.ts
-      features/               progress, admin (empty)
+      features/progress/      ProgressScreen, api.ts
+      features/               admin (empty)
       lib/                    supabase.ts (client), utils.ts (cn helper), useLoad.ts (async loader hook)
 ```
 
@@ -84,9 +85,9 @@ LunasTech/
 - auth -> Signup, login, email confirmation, session (Supabase Auth). Built, including forgot and reset password.
 - guides -> Device and symptom selection, matching guides, step-by-step guide with saved progress. Built; offline cache not yet.
 - simulations -> Step simulation; scoring and feedback come from the submit_answer database function. Built; opened from the end of a guide.
-- progress -> Saved progress, completed simulations, learning level
+- progress -> Saved progress, completed simulations, learning level. Built (read-only display).
 - admin -> Approving and publishing guides and scenarios
-- layout -> Persistent header and navigation shell
+- layout -> Persistent header and navigation shell. Tabs: Guides, Progress. Bottom bar on phones, top bar from md up.
 
 **Key Dependencies Between Files:**
 - src/main.tsx -> depends on -> src/App.tsx, src/index.css, @fontsource-variable/inter
@@ -95,10 +96,12 @@ LunasTech/
 - every feature -> depends on -> src/lib/supabase.ts, src/layout
 - features/simulations -> depends on -> start_simulation() and submit_answer() in the initial_schema migration (changing their names or return shape breaks it)
 - features/simulations/* -> depends on -> tables simulations, simulation_steps (only id, position, prompt, options are readable by users), step_results; features/guides/ListScreen.tsx; lib/useLoad.ts
+- features/progress/api.ts -> depends on -> profiles.learning_level, guide_progress, simulation_attempts (with embedded guides and simulations titles) in the initial_schema migration
+- layout/Shell.tsx (nav, NavTab) -> used by -> App.tsx; --size-tab-bar token in index.css; the main area bottom padding on phones depends on it
 - features/guides/GuidesFlow.tsx -> depends on -> features/simulations (SimulationList, SimulationScreen); GuideScreen's onFinished leads into them
 - features/admin -> depends on -> admin_simulation_steps() and the admin row level security policies
 - recalculate_learning_level() -> depends on -> simulation_attempts.passed, guides.kind
-- src/App.tsx -> depends on -> features/auth (AuthProvider, AuthFlow, ResetPasswordScreen), features/guides/GuidesFlow, layout/Shell.tsx, components/ui/Button.tsx
+- src/App.tsx -> depends on -> features/auth (AuthProvider, AuthFlow, ResetPasswordScreen), features/guides/GuidesFlow, features/progress/ProgressScreen, layout/Shell.tsx, components/ui/Button.tsx
 - features/guides/api.ts -> depends on -> tables device_types, symptoms, guides, guide_steps, guide_progress in the initial_schema migration (renaming a column breaks it) and the row level security policies on them
 - features/guides/GuideScreen.tsx -> depends on -> features/auth/AuthProvider (user id for guide_progress), lib/useLoad.ts
 - features/guides/* -> depends on -> components/ui/* (BackButton, ChoiceList, Button), index.css tokens
@@ -144,3 +147,4 @@ AI: when the structure changes during the build, log it here.
 ---
 | 2026-10-06 | Added features/guides, components/ui/BackButton + ChoiceList, lib/useLoad; App.tsx renders GuidesFlow when signed in | Decision #9 |
 | 2026-10-06 | Added features/simulations; GuideScreen gained onFinished; GuidesFlow gained simulations and simulation routes | Decision #10 |
+| 2026-10-06 | Added features/progress; Shell gained a nav prop (bottom tab bar on phones, header tabs from md up); App.tsx gained SignedIn with Guides and Progress tabs | Decision #11 |

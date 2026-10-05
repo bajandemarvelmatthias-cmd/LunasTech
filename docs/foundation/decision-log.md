@@ -339,3 +339,28 @@ Option A. Each step is one question with radio options and a "Check answer" butt
 - Options are assumed to be plain text strings (open-questions.md #16).
 - Not tested against a live Supabase project. submit_answer and start_simulation have also never been run (migration untested).
 - The result screen shows the learning level, but there is no progress screen yet.
+
+### #11
+**Date:** 2026-10-06
+**Milestone:** Progress screen and navigation
+
+**Context:**
+Progress is the second destination, so decision #6 (bottom tab bar on phones,
+top bar on wider screens) now applies. The level and results are calculated
+in the database; the screen only has to show them.
+
+**Options Considered:**
+- A: Two tabs, Guides and Progress. The learning level is the screen's headline, followed by lists of guides and simulations the user has touched. The app does not calculate points to the next level.
+- B: Also show points and the distance to the next level.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation.
+
+**Decision:**
+Option A. Tab icons are Phosphor BookOpen (Guides) and ChartLineUp (Progress), always shown with their text label. The Progress tab has no title repeating its name (ux-ui-guidelines.md, label rules). Guides stays mounted when switching tabs so the user keeps their place; Progress reloads on each visit. B is rejected: it would copy the level thresholds from the database into the app, giving two places to change (decision #4 keeps them in one function).
+
+**Consequences:**
+- Navigation lives in Shell and shows only when signed in; auth screens keep the centered column with no navigation.
+- A guide shows "Completed" or its saved step number. A simulation shows Passed if any finished attempt passed, otherwise Not passed.
+- Admin navigation is not added yet. It joins the tab list when the admin area is built.
+- Not tested against a live Supabase project; the embedded titles in the queries rely on the foreign keys in the migration.
