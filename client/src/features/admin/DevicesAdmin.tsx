@@ -153,24 +153,19 @@ export function DevicesAdmin() {
     }
   }
 
-  // The bin on an archived device: delete it for good. With no guides that is
-  // one confirmation. With guides, they are deleted too (with their simulations
-  // and every customer's progress), so the admin must type the device name
-  // (decision-log.md #28).
+  // The bin on an archived device: delete it for good after a yes / no
+  // confirmation. With guides, they are deleted too, with their simulations and
+  // every customer's progress (decision-log.md #28).
   async function destroy(d: DeviceSummary) {
     const n = d.guides;
     if (n === 0) {
       await remove(d);
       return;
     }
-    const typed = window.prompt(
-      `Permanently delete ${d.name}?\n\nThis also deletes its ${n} ${n === 1 ? "guide" : "guides"}, their simulations and every customer's progress on them. This can't be undone.\n\nType the device name to confirm: ${d.name}`,
+    const sure = window.confirm(
+      `Permanently delete ${d.name}?\n\nThis also deletes its ${n} ${n === 1 ? "guide" : "guides"}, their simulations and every customer's progress on them. This can't be undone.`,
     );
-    if (typed === null) return;
-    if (typed.trim() !== d.name) {
-      setRowError("The name didn't match, so nothing was deleted.");
-      return;
-    }
+    if (!sure) return;
     setWorkingId(d.id);
     setRowError(undefined);
     try {

@@ -791,13 +791,13 @@ Not searched. Chosen by the human's request.
 **Decision:**
 Option A. No schema change. This is the first time the app deletes guides, so it amends #14 ("guides are never deleted") for this one path.
 - An archived device shows a restore icon and a bin ("Delete permanently").
-- No guides: "Delete X permanently? ... This can't be undone." and OK / Cancel.
-- With guides: a prompt says how many guides go, and that their simulations and every customer's progress go with them. Nothing is deleted unless the exact device name is typed.
+- Both cases use a yes / no confirmation (OK / Cancel). No guides: "Delete X permanently? ... This can't be undone."
+- With guides: the message says how many guides go, and that their simulations and every customer's progress go with them. The human asked for a plain yes / no instead of typing the device name.
 - The app deletes the device's guides first, then the device. Deleting a guide cascades to its steps, simulations, attempts, results, progress and saved marks.
 - Active devices are unchanged (#27): the bin archives when guides exist.
 
 **Consequences:**
-- Customers lose their progress and attempts on those guides. It cannot be undone.
+- Customers lose their progress and attempts on those guides. It cannot be undone, and one OK click is enough to confirm it.
 - Photos uploaded for the deleted guides stay in the guide-images storage bucket; the app does not remove them.
 - If deleting the guides works but deleting the device fails, the guides stay deleted and the device stays archived; the screen shows an error and the admin can try again.
 - Typecheck passes. Not run in a browser or against a live Supabase project.
