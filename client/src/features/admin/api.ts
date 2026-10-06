@@ -2,11 +2,15 @@ import { supabase } from "@/lib/supabase";
 import { fetchGuideSteps } from "@/features/guides/api";
 import type { GuideKind, GuideStep } from "@/features/guides/types";
 import type {
+  AdminCounts,
   AdminGuideRow,
+  CustomerRow,
+  DeviceSummary,
   GuideDetail,
   SimStepDraft,
   SimStepFull,
   SimulationDetail,
+  SimulationListRow,
   SimulationRow,
   Status,
   StepDraft,
@@ -26,6 +30,7 @@ type GuideQuery = {
   title: string;
   kind: GuideKind;
   status: Status;
+  created_at: string;
   symptoms: { name: string; device_types: { name: string } | null } | null;
 };
 
@@ -33,7 +38,7 @@ type GuideQuery = {
 export async function fetchAdminGuides(): Promise<AdminGuideRow[]> {
   const { data, error } = await supabase
     .from("guides")
-    .select("id, title, kind, status, symptoms(name, device_types(name))")
+    .select("id, title, kind, status, created_at, symptoms(name, device_types(name))")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data as unknown as GuideQuery[]).map((g) => ({
@@ -43,6 +48,7 @@ export async function fetchAdminGuides(): Promise<AdminGuideRow[]> {
     status: g.status,
     device: g.symptoms?.device_types?.name ?? "",
     symptom: g.symptoms?.name ?? "",
+    createdAt: g.created_at,
   }));
 }
 
@@ -282,11 +288,135 @@ export async function setSimulationStatus(simulationId: string, status: Status):
   if (error) throw error;
 }
 
-// Admins can read every profile (row level security); this only counts them.
-export async function fetchUserCount(): Promise<number> {
-  const { count, error } = await supabase
-    .from("profiles")
-    .select("id", { count: "exact", head: true });
+// ---------- Dashboard pages (decision-log.md #20) ----------
+// Read-only except createDevice. Row level security decides what an admin may
+// read or write; nothing here needs a schema change.
+
+const HEAD = { count: "exact", head: true } as const;
+
+// Counts for the overview and the exported report. Guide counts come from
+// fetchAdminGuides, which the overview already loads.
+export async function fetchAdminCounts(): Promise<AdminCounts> {
+  const [devices, symptoms, sims, simsPublished, customers, completed, passed] = await Promise.all([
+    supabase.from("device_types").select("id", HEAD),
+    supabase.from("symptoms").select("id", HEAD),
+    supabase.from("simulations").select("id", HEAD),
+    supabase.from("simulations").select("id", HEAD).eq("status", "published"),
+    supabase.from("profiles").select("id", HEAD),
+    supabase.from("simulation_attempts").select("id", HEAD).not("completed_at", "is", null),
+    supabase.from("simulation_attempts").select("id", HEAD).eq("passed", true),
+  ]);
+  for (const r of [devices, symptoms, sims, simsPublished, customers, completed, passed]) {
+    if (r.error) throw r.error;
+  }
+  return {
+    devices: devices.count ?? 0,
+    symptoms: symptoms.count ?? 0,
+    simulations: sims.count ?? 0,
+    publishedSimulations: simsPublished.count ?? 0,
+    customers: customers.count ?? 0,
+    attemptsCompleted: completed.count ?? 0,
+    attemptsPassed: passed.count ?? 0,
+  };
+}
+
+type SimListQuery = {
+  id: string;
+  title: string;
+  status: Status;
+  guide_id: string;
+  created_at: string;
+  guides: { title: string } | null;
+  simulation_steps: { id: string }[];
+  simulation_attempts: { count: number }[];
+};
+
+// Every simulation with its guide. Steps are counted from their ids because
+// only id, position, prompt and options are readable columns (decision #3).
+export async function fetchAllSimulations(): Promise<SimulationListRow[]> {
+  const { data, error } = await supabase
+    .from("simulations")
+    .select(
+      "id, title, status, guide_id, created_at, guides(title), simulation_steps(id), simulation_attempts(count)",
+    )
+    .order("created_at", { ascending: false });
   if (error) throw error;
-  return count ?? 0;
+  return (data as unknown as SimListQuery[]).map((s) => ({
+    id: s.id,
+    title: s.title,
+    status: s.status,
+    guideId: s.guide_id,
+    guideTitle: s.guides?.title ?? "",
+    steps: s.simulation_steps.length,
+    attempts: s.simulation_attempts[0]?.count ?? 0,
+    createdAt: s.created_at,
+  }));
+}
+
+type DeviceQuery = {
+  id: string;
+  name: string;
+  symptoms: { id: string; name: string; guides: { id: string; status: Status }[] }[];
+};
+
+export async function fetchDeviceSummaries(): Promise<DeviceSummary[]> {
+  const { data, error } = await supabase
+    .from("device_types")
+    .select("id, name, symptoms(id, name, guides(id, status))")
+    .order("name");
+  if (error) throw error;
+  return (data as unknown as DeviceQuery[]).map((d) => {
+    const all = d.symptoms.flatMap((s) => s.guides);
+    return {
+      id: d.id,
+      name: d.name,
+      guides: all.length,
+      published: all.filter((g) => g.status === "published").length,
+      symptoms: d.symptoms
+        .map((s) => ({ id: s.id, name: s.name, guides: s.guides.length }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    };
+  });
+}
+
+export async function createDevice(name: string): Promise<void> {
+  const { error } = await supabase.from("device_types").insert({ name });
+  if (error) throw error;
+}
+
+// Postgres unique violation: the same name already exists.
+export function isDuplicate(error: unknown): boolean {
+  return typeof error === "object" && error !== null && (error as { code?: string }).code === "23505";
+}
+
+type ProfileQuery = {
+  id: string;
+  display_name: string | null;
+  role: CustomerRow["role"];
+  learning_level: number;
+  created_at: string;
+};
+
+export const CUSTOMER_LIMIT = 1000;
+
+// Admins can read every profile. Email addresses live in auth.users, which the
+// app cannot read, so only the profile fields are shown. `total` is the full
+// count; `rows` holds the newest CUSTOMER_LIMIT.
+export async function fetchCustomers(): Promise<{ rows: CustomerRow[]; total: number }> {
+  const { data, error, count } = await supabase
+    .from("profiles")
+    .select("id, display_name, role, learning_level, created_at", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(0, CUSTOMER_LIMIT - 1);
+  if (error) throw error;
+  return {
+    total: count ?? data.length,
+    rows: (data as ProfileQuery[]).map((p) => ({
+      id: p.id,
+      name: p.display_name,
+      role: p.role,
+      level: p.learning_level,
+      joined: p.created_at,
+    })),
+  };
 }

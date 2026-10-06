@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { BookOpen, ChartLineUp, SquaresFour } from "@phosphor-icons/react";
+import { BookOpen, ChartLineUp, Cube, DeviceMobile, SquaresFour, Users } from "@phosphor-icons/react";
 import { AuthProvider, useAuth } from "@/features/auth/AuthProvider";
 import { AuthFlow } from "@/features/auth/AuthFlow";
 import { ResetPasswordScreen } from "@/features/auth/ResetPasswordScreen";
 import { AdminFlow } from "@/features/admin/AdminFlow";
 import { fetchIsAdmin } from "@/features/admin/api";
+import { CustomersAdmin } from "@/features/admin/CustomersAdmin";
+import { DevicesAdmin } from "@/features/admin/DevicesAdmin";
+import type { AdminStart } from "@/features/admin/types";
 import { GuidesFlow, type GuidesStart } from "@/features/guides/GuidesFlow";
 import { AdminOverview } from "@/features/overview/AdminOverview";
 import { CustomerOverview } from "@/features/overview/CustomerOverview";
@@ -21,7 +24,13 @@ const CUSTOMER_TABS: NavTab[] = [
   { id: "guides", label: "Repair Guides", icon: BookOpen },
   { id: "progress", label: "My Progress", icon: ChartLineUp },
 ];
-const ADMIN_TABS: NavTab[] = [OVERVIEW, { id: "guides", label: "Guides", icon: BookOpen }];
+const ADMIN_TABS: NavTab[] = [
+  OVERVIEW,
+  { id: "guides", label: "Guides", icon: BookOpen },
+  { id: "simulations", label: "Simulations", icon: Cube },
+  { id: "devices", label: "Devices", icon: DeviceMobile },
+  { id: "customers", label: "Customers", icon: Users },
+];
 
 type Workspace = "customer" | "admin";
 
@@ -34,12 +43,19 @@ function SignedIn() {
   const [tab, setTab] = useState("overview");
   // Opening guides from the dashboard remounts the flow so it can start at a device or a guide.
   const [guidesTarget, setGuidesTarget] = useState<{ id: number; start?: GuidesStart }>({ id: 0 });
+  // Same idea for the admin sections: the overview can open one at a given spot.
+  const [adminTarget, setAdminTarget] = useState<{ id: number; start?: AdminStart }>({ id: 0 });
   const { data: isAdmin } = useLoad(() => fetchIsAdmin(userId), [userId]);
   const current: Workspace = isAdmin && workspace === "admin" ? "admin" : "customer";
 
   function openGuides(start?: GuidesStart) {
     setGuidesTarget((t) => ({ id: t.id + 1, start }));
     setTab("guides");
+  }
+
+  function openAdmin(next: string, start?: AdminStart) {
+    setAdminTarget((t) => ({ id: t.id + 1, start }));
+    setTab(next);
   }
 
   function switchTo(next: Workspace) {
@@ -49,7 +65,7 @@ function SignedIn() {
 
   return (
     <Shell
-      wide={tab === "overview"}
+      wide={tab === "overview" || current === "admin"}
       sidebarFooter={
         <SidebarFooter email={session?.user.email ?? ""} admin={current === "admin"} onStart={() => openGuides()} />
       }
@@ -64,11 +80,16 @@ function SignedIn() {
           <TextButton onClick={() => supabase.auth.signOut()}>Log out</TextButton>
         </div>
       }
-      nav={{ tabs: current === "admin" ? ADMIN_TABS : CUSTOMER_TABS, active: tab, onChange: setTab }}
+      nav={{
+        tabs: current === "admin" ? ADMIN_TABS : CUSTOMER_TABS,
+        active: tab,
+        // Admin tabs clear any spot the overview chose, so a tab always opens on its list.
+        onChange: current === "admin" ? (id) => openAdmin(id) : setTab,
+      }}
     >
       {tab === "overview" &&
         (current === "admin" ? (
-          <AdminOverview onOpenGuides={() => setTab("guides")} />
+          <AdminOverview onOpen={openAdmin} />
         ) : (
           <CustomerOverview onOpen={openGuides} />
         ))}
@@ -79,7 +100,12 @@ function SignedIn() {
         </div>
       )}
       {current === "customer" && tab === "progress" && <ProgressScreen />}
-      {current === "admin" && tab === "guides" && <AdminFlow />}
+      {/* Admin sections reload on every visit; the key restarts a section at the spot the overview chose. */}
+      {current === "admin" && (tab === "guides" || tab === "simulations") && (
+        <AdminFlow key={`${tab}-${adminTarget.id}`} section={tab} start={adminTarget.start} />
+      )}
+      {current === "admin" && tab === "devices" && <DevicesAdmin />}
+      {current === "admin" && tab === "customers" && <CustomersAdmin />}
     </Shell>
   );
 }

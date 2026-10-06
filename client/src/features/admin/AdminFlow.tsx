@@ -1,73 +1,78 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { ListScreen } from "@/features/guides/ListScreen";
-import { KIND_LABEL } from "@/features/guides/types";
-import { useLoad } from "@/lib/useLoad";
-import { fetchAdminGuides } from "./api";
+import { useState, type ReactNode } from "react";
+import { GuideAdminList } from "./GuideAdminList";
 import { GuideEditor } from "./GuideEditor";
 import { SimulationAdminList, SimulationEditor } from "./SimulationAdmin";
-import { STATUS_LABEL } from "./types";
+import { SimulationsAllList } from "./SimulationsAllList";
+import type { AdminStart } from "./types";
 
+// "all" means the simulation was opened from the Simulations page; "guide"
+// means from a guide's own simulation list. Back returns to where it came from.
 type Route =
   | { name: "list" }
   | { name: "edit"; guideId: string | null }
   | { name: "sims"; guideId: string }
-  | { name: "sim"; guideId: string; simulationId: string | null };
+  | { name: "sim"; guideId: string; simulationId: string | null; from: "all" | "guide" };
 
-// Every guide (drafts included), the editor for one guide, and that guide's
-// simulations with their editor.
+// Forms stay a narrow centered column inside the wide admin page.
+function Narrow({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className="mx-auto w-full max-w-md">{children}</div>;
+}
+
+// The Guides and Simulations sections of the admin workspace.
+// Guides: list, guide editor, that guide's simulations and their editor.
+// Simulations: list of every simulation and the same simulation editor.
 // State-based like the other flows. Unlike the Guides flow it does not follow
 // the browser back button (decision-log.md #14).
-export function AdminFlow() {
-  const [route, setRoute] = useState<Route>({ name: "list" });
+export function AdminFlow({
+  section,
+  start,
+}: Readonly<{ section: "guides" | "simulations"; start?: AdminStart }>) {
+  const [route, setRoute] = useState<Route>(() =>
+    start?.editGuide === undefined ? { name: "list" } : { name: "edit", guideId: start.editGuide },
+  );
 
   switch (route.name) {
     case "edit":
       return (
-        <GuideEditor
-          guideId={route.guideId}
-          onBack={() => setRoute({ name: "list" })}
-          onSimulations={(guideId) => setRoute({ name: "sims", guideId })}
-        />
+        <Narrow>
+          <GuideEditor
+            guideId={route.guideId}
+            onBack={() => setRoute({ name: "list" })}
+            onSimulations={(guideId) => setRoute({ name: "sims", guideId })}
+          />
+        </Narrow>
       );
     case "sims":
       return (
-        <SimulationAdminList
-          guideId={route.guideId}
-          onBack={() => setRoute({ name: "edit", guideId: route.guideId })}
-          onOpen={(simulationId) => setRoute({ name: "sim", guideId: route.guideId, simulationId })}
-        />
+        <Narrow>
+          <SimulationAdminList
+            guideId={route.guideId}
+            onBack={() => setRoute({ name: "edit", guideId: route.guideId })}
+            onOpen={(simulationId) => setRoute({ name: "sim", guideId: route.guideId, simulationId, from: "guide" })}
+          />
+        </Narrow>
       );
     case "sim":
       return (
-        <SimulationEditor
-          guideId={route.guideId}
-          simulationId={route.simulationId}
-          onBack={() => setRoute({ name: "sims", guideId: route.guideId })}
-        />
+        <Narrow>
+          <SimulationEditor
+            guideId={route.guideId}
+            simulationId={route.simulationId}
+            onBack={() =>
+              setRoute(route.from === "all" ? { name: "list" } : { name: "sims", guideId: route.guideId })
+            }
+          />
+        </Narrow>
       );
   }
-  return <GuideAdminList onOpen={(guideId) => setRoute({ name: "edit", guideId })} />;
-}
 
-function GuideAdminList({ onOpen }: Readonly<{ onOpen: (guideId: string | null) => void }>) {
-  const { data, loading, error, retry } = useLoad(fetchAdminGuides, []);
-  return (
-    <ListScreen
-      title="All guides"
-      loading={loading}
-      error={error}
-      onRetry={retry}
-      items={
-        data?.map((g) => ({
-          id: g.id,
-          label: g.title,
-          note: `${g.device} · ${g.symptom} · ${KIND_LABEL[g.kind]} · ${STATUS_LABEL[g.status]}`,
-        })) ?? null
-      }
-      empty="No guides yet."
-      onSelect={onOpen}
-      action={<Button onClick={() => onOpen(null)}>New guide</Button>}
-    />
-  );
+  if (section === "simulations") {
+    return (
+      <SimulationsAllList
+        onOpen={(guideId, simulationId) => setRoute({ name: "sim", guideId, simulationId, from: "all" })}
+        onNew={(guideId) => setRoute({ name: "sim", guideId, simulationId: null, from: "all" })}
+      />
+    );
+  }
+  return <GuideAdminList initialFilter={start?.filter} onOpen={(guideId) => setRoute({ name: "edit", guideId })} />;
 }

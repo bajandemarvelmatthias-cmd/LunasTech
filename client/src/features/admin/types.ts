@@ -9,7 +9,11 @@ export type AdminGuideRow = {
   status: Status;
   device: string;
   symptom: string;
+  createdAt: string;
 };
+
+// Status filter on the guides list. The overview opens it on "draft".
+export type GuideFilter = "all" | Status;
 
 export type SymptomOption = { id: string; label: string };
 
@@ -59,3 +63,54 @@ export type SimStepDraft = {
 // Database limits (check constraint on simulation_steps.options).
 export const MIN_OPTIONS = 2;
 export const MAX_OPTIONS = 6;
+
+// ---------- Dashboard pages (decision-log.md #20) ----------
+
+// One row of the all-simulations list. `steps` and `attempts` are counts.
+export type SimulationListRow = {
+  id: string;
+  title: string;
+  status: Status;
+  guideId: string;
+  guideTitle: string;
+  steps: number;
+  attempts: number;
+  createdAt: string;
+};
+
+export type SymptomSummary = { id: string; name: string; guides: number };
+
+// A device type with its symptoms and guide counts (drafts included).
+export type DeviceSummary = {
+  id: string;
+  name: string;
+  symptoms: SymptomSummary[];
+  guides: number;
+  published: number;
+};
+
+export type CustomerRole = "user" | "admin";
+
+export type CustomerRow = {
+  id: string;
+  name: string | null;
+  role: CustomerRole;
+  level: number;
+  joined: string;
+};
+
+// Counts shown on the admin overview and written to the exported report.
+export type AdminCounts = {
+  devices: number;
+  symptoms: number;
+  simulations: number;
+  publishedSimulations: number;
+  customers: number;
+  attemptsCompleted: number;
+  attemptsPassed: number;
+};
+
+// Where an admin section opens. Sent by the overview; the section starts there.
+// `filter` opens the guides list on one status. `editGuide` opens the guide
+// editor (null starts a new guide).
+export type AdminStart = { filter?: GuideFilter; editGuide?: string | null };

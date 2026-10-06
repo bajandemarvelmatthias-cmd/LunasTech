@@ -52,3 +52,23 @@ export function TextButton({
     />
   );
 }
+
+// Secondary action beside a primary one (for example "Export report").
+// Same height as Button; width follows its content.
+export function OutlineButton({
+  className,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "flex h-(--size-control) items-center justify-center gap-2 rounded-md border border-border bg-surface px-4 text-base font-semibold text-accent",
+        "hover:border-accent disabled:cursor-not-allowed disabled:text-text-muted",
+        focus,
+        className,
+      )}
+      {...rest}
+    />
+  );
+}

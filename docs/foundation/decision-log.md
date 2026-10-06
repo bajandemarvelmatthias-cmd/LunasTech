@@ -555,3 +555,36 @@ Option B. The Overview page now has: greeting by time of day, hero, four stat ca
 - The design's Beginner/Explorer labels are not used; the page shows the numeric level the database calculates.
 - Opening guides from the dashboard resets the Guides flow, so a half-finished browse is lost.
 - Typecheck passes. Not run in a browser or against a live Supabase project; ESLint not run.
+
+### #20
+**Date:** 2026-10-06
+**Milestone:** Admin dashboard from the fourth design file (amends #17)
+
+**Context:**
+The human supplied a design export for the admin dashboard (Overview, Repair guides, Devices, Diagnosis rules, Simulations, Customers, Reports, with add, edit and delete dialogs) and asked whether it fits the tech stack, then said to go with the AI's recommendation and build it. The export is plain CSS with local state, localStorage and sample data. This project is React, Tailwind tokens and Supabase, and an admin area already exists (decisions #14 to #17).
+
+**Options Considered:**
+- A: Port the export as is (its CSS, sample data, localStorage).
+- B: Rebuild the layout and look in this project's stack and use real data wherever a table already exists, as in #19.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation, following #19.
+
+**Decision:**
+Option B. No schema change, no new dependency, no token change. Admin tabs: Overview, Guides, Simulations, Devices, Customers.
+- Overview: four count cards that open their page (guides with published and draft split, devices with symptom count, simulations with published and attempt counts, customers), latest five guides (a row opens that guide), a guide readiness ring (percent published, pass rate of completed simulation attempts, Review drafts or Manage guides), Export report (CSV of the counts), Create guide.
+- Guides: all guides with All / Published / Draft filter, search, type, status and created date. Same editor as before.
+- Simulations: all simulations with guide, step count, attempt count, status, created date; a row opens the existing simulation editor. New simulation asks which guide it belongs to, then opens the same editor.
+- Devices: device types with symptom and guide counts, and a Symptoms list below. Add device and Add symptom are the only writes (device_types and symptoms admin policies already allow them).
+- Customers: read-only list of profiles (display name, role, learning level, joined), search.
+The design's tables were drawn as lists that read as tables from md up, because the guidelines say a table is a container and not to nest it in a card. Status uses the existing soft accent and secondary surface, not the design's amber, red and grey badges. A centered modal (components/ui/Modal.tsx, native dialog element) is used for the add dialogs, per the modal rule.
+
+**Consequences:**
+- Not built, because nothing backs them: Diagnosis rules (condition, recommendation, safety warning; the symptom and guide flow is the existing diagnosis, constraints.md #3), device manufacturer, category and notes, guide difficulty, estimated time and cover image, customer email and Suspend (emails live in auth.users, status has no column), Reports as its own page (its numbers are on the overview and in Export report), Help and resources, the "Local prototype" label and the Demo badge (data is real), the Preview card in the sidebar (the header already has Preview customer).
+- Delete is not offered for guides (unpublish instead, #14), devices or symptoms (guides and symptoms reference them), or simulations. Rename is not offered for devices or symptoms.
+- Guides, Simulations, Devices and Customers reload on every visit. Leaving the guide or simulation editor through a sidebar tab discards unsaved edits without the prompt that the editor's own Back button shows.
+- Five admin tabs on the phone bottom bar: the label "Simulations" is close to the width of one column on a 390px screen. Not checked on a device.
+- Customers loads the newest 1000 profiles (the API row limit). Search covers the loaded rows only; the list says when it is truncated.
+- guide_progress is readable only by its owner, so completion counts across customers are not shown.
+- Simulation counts read step ids because only id, position, prompt and options are readable columns (#3).
+- Typecheck passes. ESLint and a build were not possible in the build environment (Windows-only binaries in node_modules), and nothing was run in a browser or against a live Supabase project.

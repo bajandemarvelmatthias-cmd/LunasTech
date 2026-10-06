@@ -73,12 +73,12 @@ LunasTech/
     src/
       main.tsx, App.tsx, index.css (design tokens), vite-env.d.ts
       layout/                 Shell.tsx (fixed header, centered content column, tab navigation)
-      components/ui/          Button.tsx, TextField.tsx, TextArea.tsx, Select.tsx, BackButton.tsx, ChoiceList.tsx (plain Tailwind on tokens; shadcn not installed)
+      components/ui/          Button.tsx (Button, TextButton, OutlineButton), TextField.tsx, TextArea.tsx, Select.tsx, BackButton.tsx, ChoiceList.tsx, Modal.tsx (plain Tailwind on tokens; shadcn not installed)
       features/auth/          AuthProvider, AuthFlow, LoginScreen, SignupScreen, ForgotPasswordScreen, ResetPasswordScreen, CheckEmailScreen, errors.ts, validation.ts
       features/guides/        GuidesFlow, ListScreen, GuideScreen, api.ts, types.ts
       features/simulations/   SimulationList, SimulationScreen, api.ts, types.ts
       features/progress/      ProgressScreen, api.ts
-      features/admin/         AdminFlow, GuideEditor, SimulationAdmin, api.ts, types.ts
+      features/admin/         AdminFlow, GuideAdminList, GuideEditor, SimulationsAllList, SimulationAdmin, DevicesAdmin, CustomersAdmin, parts.tsx, editorParts.tsx, exportReport.ts, api.ts, types.ts
       lib/                    supabase.ts (client), utils.ts (cn helper), useLoad.ts (async loader hook), useHistoryStack.ts (screen stack tied to browser back)
 ```
 
@@ -87,7 +87,7 @@ LunasTech/
 - guides -> Device and symptom selection, matching guides, step-by-step guide with saved progress. Built; offline cache via service worker (decision #12, untested in a browser).
 - simulations -> Step simulation; scoring and feedback come from the submit_answer database function. Built; opened from the end of a guide.
 - progress -> Saved progress, completed simulations, learning level. Built (read-only display).
-- admin -> Guides and simulations: list, create, edit, publish (decisions #14, #15). Reached through the Admin tab, admins only.
+- admin -> Admin workspace for admins only. Tabs: Overview, Guides, Simulations, Devices, Customers (decisions #14, #15, #20). Guides and simulations: list, create, edit, publish. Devices: list and add devices and symptoms. Customers: read-only list. Overview: counts, latest guides, readiness, CSV export.
 - layout -> Persistent header and navigation shell. Tabs: Guides, Progress. Bottom bar on phones, top bar from md up.
 
 **Key Dependencies Between Files:**
@@ -102,9 +102,13 @@ LunasTech/
 - features/guides/GuidesFlow.tsx -> depends on -> lib/useHistoryStack.ts (owns the screen stack and history entries); features/simulations (SimulationList, SimulationScreen); GuideScreen's onFinished leads into them
 - vite.config.ts (workbox runtimeCaching) -> depends on -> table names in features/guides/api.ts (device_types, symptoms, guides, guide_steps); the cached tables are listed inside the urlPattern function
 - features/admin -> depends on -> profiles.role (tab visibility), the admin row level security policies on device_types, symptoms, guides, guide_steps, and the unique (guide_id, position) constraint; features/guides (api fetchGuideSteps and fetchDevices, ListScreen, types); components/ui/*
+- features/admin/GuideAdminList.tsx, SimulationsAllList.tsx, DevicesAdmin.tsx, CustomersAdmin.tsx -> depend on -> features/admin/api.ts (fetchAdminGuides, fetchAllSimulations, fetchDeviceSummaries, fetchCustomers, createDevice, createSymptom), features/admin/parts.tsx (lists, badges, filters), features/overview/parts.tsx (PageHeader, LoadError), components/ui/*, lib/utils.ts (formatDate)
+- features/overview/AdminOverview.tsx -> depends on -> features/admin/api.ts (fetchAdminGuides, fetchAdminCounts), features/admin/exportReport.ts, features/admin/parts.tsx; its onOpen(tab, start) must match the admin tab ids in App.tsx (guides, simulations, devices, customers)
+- features/admin/api.ts (dashboard functions) -> depend on -> profiles, device_types, symptoms, guides, simulations, simulation_steps (id only), simulation_attempts (completed_at, passed) and the admin row level security policies; no schema change
+- components/ui/Modal.tsx -> used by -> features/admin/DevicesAdmin.tsx, SimulationsAllList.tsx (native dialog element)
 - features/admin/SimulationAdmin.tsx and api.ts (simulation functions) -> depend on -> admin_simulation_steps(), tables simulations and simulation_steps (column privileges and check constraints: 2 to 6 options, correct_option in range, unique (simulation_id, position)); the options-as-text assumption shared with features/simulations (open-questions #16)
 - recalculate_learning_level() -> depends on -> simulation_attempts.passed, guides.kind
-- src/App.tsx -> depends on -> features/admin (AdminFlow, fetchIsAdmin; the Admin tab appears only for admins); features/auth (AuthProvider, AuthFlow, ResetPasswordScreen), features/guides/GuidesFlow, features/progress/ProgressScreen, layout/Shell.tsx, components/ui/Button.tsx
+- src/App.tsx -> depends on -> features/admin (AdminFlow, DevicesAdmin, CustomersAdmin, fetchIsAdmin; the admin tabs appear only for admins); features/auth (AuthProvider, AuthFlow, ResetPasswordScreen), features/guides/GuidesFlow, features/progress/ProgressScreen, layout/Shell.tsx, components/ui/Button.tsx
 - features/guides/api.ts -> depends on -> tables device_types, symptoms, guides, guide_steps, guide_progress in the initial_schema migration (renaming a column breaks it) and the row level security policies on them
 - features/guides/GuideScreen.tsx -> depends on -> features/auth/AuthProvider (user id for guide_progress), lib/useLoad.ts
 - features/guides/* -> depends on -> components/ui/* (BackButton, ChoiceList, Button), index.css tokens
@@ -157,3 +161,4 @@ AI: when the structure changes during the build, log it here.
 | 2026-10-06 | Added features/admin/SimulationAdmin.tsx; AdminFlow gained sims and sim routes; GuideEditor gained an onSimulations link | Decision #15 |
 | 2026-10-06 | Added supabase/tests/smoke_test.sql (scoring, hidden answers, admin rights; rolls back) | Migration was untested and no database was available to run it |
 | 2026-10-06 | Added placeholder PWA icons, manifest icons and an apple-touch-icon link | So installing can be tested; real icon still open (open-questions #3) |
+| 2026-10-06 | Added features/admin GuideAdminList, SimulationsAllList, DevicesAdmin, CustomersAdmin, parts.tsx, exportReport.ts; AdminFlow gained a section prop; AdminOverview rewritten; components/ui gained Modal and OutlineButton; StatCard gained note and onClick; App.tsx gained five admin tabs; removed fetchUserCount (replaced by fetchAdminCounts) | Decision #20 |
