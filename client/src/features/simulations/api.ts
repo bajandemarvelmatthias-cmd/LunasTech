@@ -12,6 +12,24 @@ export async function fetchSimulations(guideId: string): Promise<Simulation[]> {
   return data;
 }
 
+export type SimulationListItem = Simulation & { guideTitle: string };
+
+type SimulationListRow = { id: string; title: string; guides: { title: string } | null };
+
+export async function fetchAllSimulations(): Promise<SimulationListItem[]> {
+  const { data, error } = await supabase
+    .from("simulations")
+    .select("id, title, guides(title)")
+    .eq("status", "published")
+    .order("title");
+  if (error) throw error;
+  return (data as unknown as SimulationListRow[]).map((s) => ({
+    id: s.id,
+    title: s.title,
+    guideTitle: s.guides?.title ?? "",
+  }));
+}
+
 export async function fetchSimulationSteps(simulationId: string): Promise<SimulationStep[]> {
   const { data, error } = await supabase
     .from("simulation_steps")

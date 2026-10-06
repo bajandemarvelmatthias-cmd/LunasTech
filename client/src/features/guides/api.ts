@@ -1,5 +1,13 @@
 import { supabase } from "@/lib/supabase";
-import type { DeviceType, Guide, GuideProgress, GuideStep, Symptom } from "./types";
+import type {
+  DeviceType,
+  Guide,
+  GuideKind,
+  GuideProgress,
+  GuideStep,
+  PublishedGuide,
+  Symptom,
+} from "./types";
 
 // Row level security decides what each user can read. Guides are filtered to
 // published here as well so admins browsing as users do not see drafts.
@@ -30,6 +38,32 @@ export async function fetchGuides(symptomId: string): Promise<Guide[]> {
     .order("title");
   if (error) throw error;
   return data as Guide[];
+}
+
+type PublishedGuideRow = {
+  id: string;
+  title: string;
+  kind: GuideKind;
+  symptoms: { name: string; device_types: { id: string; name: string } | null } | null;
+};
+
+// Every published guide with its symptom and device, newest first. One query
+// feeds Overview, Repair Guides and Saved Guides.
+export async function fetchPublishedGuides(): Promise<PublishedGuide[]> {
+  const { data, error } = await supabase
+    .from("guides")
+    .select("id, title, kind, symptoms(name, device_types(id, name))")
+    .eq("status", "published")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data as unknown as PublishedGuideRow[]).map((g) => ({
+    id: g.id,
+    title: g.title,
+    kind: g.kind,
+    symptom: g.symptoms?.name ?? "",
+    deviceId: g.symptoms?.device_types?.id ?? "",
+    device: g.symptoms?.device_types?.name ?? "",
+  }));
 }
 
 export async function fetchGuideSteps(guideId: string): Promise<GuideStep[]> {

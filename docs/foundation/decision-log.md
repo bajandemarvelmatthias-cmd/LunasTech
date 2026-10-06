@@ -487,3 +487,42 @@ Option A. "Discard your unsaved changes?" when leaving either editor or opening 
 - The first two items in #14 and #15's lists no longer apply; the step-removal warning replaces the third. A published simulation under a draft guide still gets no hint.
 - Admin editors track unsaved edits in a ref set by the form and read by the screen's Back button. A new editing path must call the form's touch/edited helper or it will not count as unsaved.
 - Typecheck passes. Not run in a browser.
+
+### #17
+**Date:** 2026-10-06
+**Milestone:** Workspace redesign (signed-in layout and pages), amends #5, #6 and #11
+
+**Context:**
+The human supplied seven screenshots of the intended customer workspace (Overview, Repair Guides, Simulations, Device Diagnosis, Saved Guides, My Progress, Settings) and asked for them to be applied to the signed-in app. They differ from the rules written earlier: a left sidebar (#6 chose a tab bar and top bar), a new green and neutral palette (#5 called its tokens final), more than three font sizes, and several screens the app did not have.
+
+**Options Considered:**
+- A: Follow the screenshots for layout, color, type and pages. Keep every other rule (flat color, Phosphor icons, tokens for every value, 8px grid). Leave out anything that has no real data behind it.
+- B: Keep #5 and #6 as they were and only restyle the existing two tabs.
+
+**Community Consensus:**
+Not searched. The human's screenshots are the reference.
+
+**Decision:**
+Option A. What changed:
+- Navigation is a left sidebar from md up and a drawer on phones, opened by the toggle in the top bar. The guidelines allow a sidebar for a multi-section app and the app now has seven destinations. The phone bottom tab bar from #6 is replaced by the drawer.
+- Tokens (index.css): accent #1f7053 (was #15803d), page color #f8faf8, tint #edf3e9, text #253831, border #e8ede8, all sampled from the screenshots. Five font sizes (xs, sm, base, lg, xl) plus display for the greeting and hero, still two weights. Header 72px, sidebar 272px.
+- The hero illustration is flat. The screenshot fades into the picture; gradients stay prohibited. The dark "Small fixes. Big impact." panel sits on the illustration and so is a card inside a card, accepted as the one exception.
+- New pages: Overview, Repair Guides (all guides with search and device filter), Simulations (all published simulations), Device Diagnosis (device type, symptom, Check symptom), Saved Guides, Settings (name and password). My Progress gained title, counts and cards.
+- Device Diagnosis replaces the old Device, Symptom, Guides list screens in GuidesFlow. The guide, simulation list and simulation screens are unchanged apart from titles and a bookmark.
+- Saved guides need a table. supabase/migrations/20261006000000_saved_guides.sql adds saved_guides (own rows only). It is additive and is applied automatically when pushed to main (supabase-migrate.yml).
+
+**Left out on purpose:**
+- Notification bell: no notifications exist, so it would do nothing.
+- "A community of curious minds" avatars: no community feature, the initials were invented.
+- "Popular guides": no popularity data. The section says "Newest guides".
+- Model field in Device Diagnosis: the database has no models.
+- "0 points", diagnosis count and diagnosis history: points are not stored (#11 keeps scoring in the database) and no diagnosis table exists. My Progress shows level name, simulations completed and guides completed instead.
+
+**Consequences:**
+- Level names for levels 1 to 4 are a delegated default (open-questions.md #17).
+- The screenshots use a different typeface from Inter (open-questions.md #19). Inter stays until answered.
+- Signup collects no name, so the greeting has no name until the user sets one in Settings.
+- The saved_guides migration must be applied before bookmarks work. Until then a bookmark tap reverts and shows an error.
+- Clicking the page you are on in the sidebar returns it to its first screen. Returning from another page keeps the place.
+- Shell.tsx now serves signed-out screens only. WorkspaceShell, Sidebar and TopBar serve signed-in screens.
+- Typecheck passes. No build or browser run was possible here (uploaded node_modules holds Windows-only binaries), so Tailwind class output and the layout have not been seen rendered.

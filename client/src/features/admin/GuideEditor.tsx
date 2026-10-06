@@ -145,7 +145,7 @@ function EditorForm({
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-lg font-semibold">{guideId ? "Edit guide" : "New guide"}</h1>
+      <h1 className="text-xl font-semibold">{guideId ? "Edit guide" : "New guide"}</h1>
       <p className="text-sm text-text-muted">{STATUS_LABEL[status]}</p>
 
       <TextField label="Title" value={title} onChange={(e) => edit(() => setTitle(e.target.value))} />

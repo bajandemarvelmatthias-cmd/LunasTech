@@ -49,7 +49,7 @@ export function ListScreen({
   return (
     <div className="flex flex-col gap-6 pb-12">
       {onBack && <BackButton onClick={onBack} />}
-      <h1 className="text-lg font-semibold">{title}</h1>
+      <h1 className="text-xl font-semibold">{title}</h1>
       {body}
       {action}
     </div>
