@@ -1,16 +1,15 @@
 import { useState, type FormEvent } from "react";
 import { supabase } from "@/lib/supabase";
-import { Button, TextButton } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { authErrorMessage, EXISTING_ACCOUNT_MESSAGE } from "./errors";
 import { isValidEmail, isValidNewPassword, PASSWORD_MIN_LENGTH } from "./validation";
 
 type Props = {
   onConfirmationSent: (email: string) => void;
-  onSwitchToLogin: () => void;
 };
 
-export function SignupScreen({ onConfirmationSent, onSwitchToLogin }: Readonly<Props>) {
+export function SignupScreen({ onConfirmationSent }: Readonly<Props>) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState({ email: false, password: false });
@@ -55,7 +54,6 @@ export function SignupScreen({ onConfirmationSent, onSwitchToLogin }: Readonly<P
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
-      <h1 className="text-lg font-semibold">Sign up</h1>
       <TextField
         label="Email"
         type="email"
@@ -84,9 +82,6 @@ export function SignupScreen({ onConfirmationSent, onSwitchToLogin }: Readonly<P
       <Button type="submit" disabled={!valid} loading={submitting}>
         {submitting ? "Signing up" : "Sign up"}
       </Button>
-      <p className="text-center text-base">
-        Have an account? <TextButton onClick={onSwitchToLogin}>Log in</TextButton>
-      </p>
     </form>
   );
 }

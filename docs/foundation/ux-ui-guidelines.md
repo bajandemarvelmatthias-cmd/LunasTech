@@ -15,6 +15,16 @@
    and placement. Let the human implement icons from their own system.
 
 ---
+## OVERRIDES (decision-log.md #17)
+---
+
+Where this file conflicts with decision #17, #17 wins:
+- A left sidebar is used from md up (phones keep the bottom tab bar).
+- One gradient is allowed on the brand panel and the customer hero. All other
+  structural surfaces stay flat.
+- A fourth font size (--text-xl) is used for hero headlines only.
+
+---
 ## CORE PHILOSOPHY
 ---
 

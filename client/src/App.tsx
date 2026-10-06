@@ -1,40 +1,82 @@
 import { useState } from "react";
-import { BookOpen, ChartLineUp, ShieldCheck } from "@phosphor-icons/react";
+import { BookOpen, ChartLineUp, SquaresFour } from "@phosphor-icons/react";
 import { AuthProvider, useAuth } from "@/features/auth/AuthProvider";
 import { AuthFlow } from "@/features/auth/AuthFlow";
+import { takeLoginIntent } from "@/features/auth/loginIntent";
 import { ResetPasswordScreen } from "@/features/auth/ResetPasswordScreen";
 import { AdminFlow } from "@/features/admin/AdminFlow";
 import { fetchIsAdmin } from "@/features/admin/api";
 import { GuidesFlow } from "@/features/guides/GuidesFlow";
+import { AdminOverview } from "@/features/overview/AdminOverview";
+import { CustomerOverview } from "@/features/overview/CustomerOverview";
 import { ProgressScreen } from "@/features/progress/ProgressScreen";
 import { TextButton } from "@/components/ui/Button";
 import { Shell, type NavTab } from "@/layout/Shell";
 import { supabase } from "@/lib/supabase";
 import { useLoad } from "@/lib/useLoad";
 
-const TABS: NavTab[] = [
+const OVERVIEW: NavTab = { id: "overview", label: "Overview", icon: SquaresFour };
+const CUSTOMER_TABS: NavTab[] = [
+  OVERVIEW,
   { id: "guides", label: "Guides", icon: BookOpen },
   { id: "progress", label: "Progress", icon: ChartLineUp },
 ];
-const ADMIN_TAB: NavTab = { id: "admin", label: "Admin", icon: ShieldCheck };
+const ADMIN_TABS: NavTab[] = [OVERVIEW, { id: "guides", label: "Guides", icon: BookOpen }];
+
+type Workspace = "customer" | "admin";
 
 function SignedIn() {
   const { session } = useAuth();
   const userId = session?.user.id ?? "";
-  const [tab, setTab] = useState("guides");
-  // The tab is only shown to admins. The database enforces what they may do.
+  // The login form's Customer / Admin choice only picks the workspace that
+  // opens first. The database enforces what an admin may do.
+  const [intent] = useState(takeLoginIntent);
+  const [workspace, setWorkspace] = useState<Workspace>(intent === "customer" ? "customer" : "admin");
+  const [tab, setTab] = useState("overview");
   const { data: isAdmin } = useLoad(() => fetchIsAdmin(userId), [userId]);
+  const current: Workspace = isAdmin && workspace === "admin" ? "admin" : "customer";
+  const notAdmin = intent === "admin" && isAdmin === false;
+
+  function switchTo(next: Workspace) {
+    setWorkspace(next);
+    setTab("overview");
+  }
+
   return (
     <Shell
-      account={<TextButton onClick={() => supabase.auth.signOut()}>Log out</TextButton>}
-      nav={{ tabs: isAdmin ? [...TABS, ADMIN_TAB] : TABS, active: tab, onChange: setTab }}
+      wide={tab === "overview"}
+      workspace={current === "admin" ? "Admin workspace" : "Your workspace"}
+      account={
+        <div className="flex items-center gap-4">
+          {isAdmin && (
+            <TextButton onClick={() => switchTo(current === "admin" ? "customer" : "admin")}>
+              {current === "admin" ? "Preview customer" : "Back to admin"}
+            </TextButton>
+          )}
+          <TextButton onClick={() => supabase.auth.signOut()}>Log out</TextButton>
+        </div>
+      }
+      nav={{ tabs: current === "admin" ? ADMIN_TABS : CUSTOMER_TABS, active: tab, onChange: setTab }}
     >
-      {/* Guides stays mounted so the user keeps their place; Progress reloads each visit. */}
-      <div hidden={tab !== "guides"}>
-        <GuidesFlow />
-      </div>
-      {tab === "progress" && <ProgressScreen />}
-      {tab === "admin" && isAdmin && <AdminFlow />}
+      {notAdmin && (
+        <p role="alert" className="mb-6 text-sm text-danger">
+          This account is not an admin account, so the customer workspace opened instead.
+        </p>
+      )}
+      {tab === "overview" &&
+        (current === "admin" ? (
+          <AdminOverview onOpenGuides={() => setTab("guides")} />
+        ) : (
+          <CustomerOverview onOpenGuides={() => setTab("guides")} />
+        ))}
+      {/* Customer Guides stays mounted so the person keeps their place; Progress reloads each visit. */}
+      {current === "customer" && (
+        <div hidden={tab !== "guides"}>
+          <GuidesFlow />
+        </div>
+      )}
+      {current === "customer" && tab === "progress" && <ProgressScreen />}
+      {current === "admin" && tab === "guides" && <AdminFlow />}
     </Shell>
   );
 }
@@ -51,11 +93,7 @@ function Root() {
   }
 
   if (!session) {
-    return (
-      <Shell>
-        <AuthFlow />
-      </Shell>
-    );
+    return <AuthFlow />;
   }
 
   // Arrived from a reset link: choose a new password before anything else.

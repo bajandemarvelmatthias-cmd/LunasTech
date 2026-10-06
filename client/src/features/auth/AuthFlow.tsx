@@ -4,6 +4,7 @@ import { LoginScreen } from "./LoginScreen";
 import { SignupScreen } from "./SignupScreen";
 import { ForgotPasswordScreen } from "./ForgotPasswordScreen";
 import { CheckEmailScreen } from "./CheckEmailScreen";
+import { AuthLayout } from "./AuthLayout";
 
 type View =
   | { name: "login" }
@@ -11,7 +12,8 @@ type View =
   | { name: "forgot" }
   | { name: "check-email"; email: string; purpose: "signup" | "recovery" };
 
-// Screens shown before sign-in. Linear flow, one centered column, no navigation.
+// Screens shown before sign-in, inside the split-screen AuthLayout. Log in and
+// Sign up share one tab switch; the other screens are single-purpose and have none.
 export function AuthFlow() {
   const { linkError } = useAuth();
   const [view, setView] = useState<View>({ name: "login" });
@@ -20,32 +22,40 @@ export function AuthFlow() {
   switch (view.name) {
     case "signup":
       return (
-        <SignupScreen
-          onConfirmationSent={(email) =>
-            setView({ name: "check-email", email, purpose: "signup" })
-          }
-          onSwitchToLogin={toLogin}
-        />
+        <AuthLayout tab="signup" onTab={(t) => setView(t === "login" ? { name: "login" } : { name: "signup" })}>
+          <SignupScreen
+            onConfirmationSent={(email) =>
+              setView({ name: "check-email", email, purpose: "signup" })
+            }
+          />
+        </AuthLayout>
       );
     case "forgot":
       return (
-        <ForgotPasswordScreen
-          onLinkSent={(email) => setView({ name: "check-email", email, purpose: "recovery" })}
-          onBack={toLogin}
-        />
+        <AuthLayout>
+          <ForgotPasswordScreen
+            onLinkSent={(email) => setView({ name: "check-email", email, purpose: "recovery" })}
+            onBack={toLogin}
+          />
+        </AuthLayout>
       );
     case "check-email":
-      return <CheckEmailScreen email={view.email} purpose={view.purpose} onBack={toLogin} />;
+      return (
+        <AuthLayout>
+          <CheckEmailScreen email={view.email} purpose={view.purpose} onBack={toLogin} />
+        </AuthLayout>
+      );
     default:
       return (
-        <LoginScreen
-          notice={linkError}
-          onNeedsConfirmation={(email) =>
-            setView({ name: "check-email", email, purpose: "signup" })
-          }
-          onForgotPassword={() => setView({ name: "forgot" })}
-          onSwitchToSignup={() => setView({ name: "signup" })}
-        />
+        <AuthLayout tab="login" onTab={(t) => setView(t === "login" ? { name: "login" } : { name: "signup" })}>
+          <LoginScreen
+            notice={linkError}
+            onNeedsConfirmation={(email) =>
+              setView({ name: "check-email", email, purpose: "signup" })
+            }
+            onForgotPassword={() => setView({ name: "forgot" })}
+          />
+        </AuthLayout>
       );
   }
 }

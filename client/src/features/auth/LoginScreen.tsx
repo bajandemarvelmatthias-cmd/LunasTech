@@ -2,22 +2,23 @@ import { useState, type FormEvent } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button, TextButton } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
+import { cn } from "@/lib/utils";
 import { authErrorMessage } from "./errors";
+import { saveLoginIntent, type LoginIntent } from "./loginIntent";
 import { isValidEmail } from "./validation";
 
 type Props = {
   notice: string | null;
   onNeedsConfirmation: (email: string) => void;
   onForgotPassword: () => void;
-  onSwitchToSignup: () => void;
 };
 
 export function LoginScreen({
   notice,
   onNeedsConfirmation,
   onForgotPassword,
-  onSwitchToSignup,
 }: Readonly<Props>) {
+  const [role, setRole] = useState<LoginIntent>("customer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState({ email: false, password: false });
@@ -35,6 +36,7 @@ export function LoginScreen({
     if (!valid || submitting) return;
     setSubmitting(true);
     setError(null);
+    saveLoginIntent(role);
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
@@ -50,7 +52,25 @@ export function LoginScreen({
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
-      <h1 className="text-lg font-semibold">Log in</h1>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-2 text-sm font-semibold">Continue as</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {(["customer", "admin"] as const).map((r) => (
+            <button
+              key={r}
+              type="button"
+              aria-pressed={role === r}
+              onClick={() => setRole(r)}
+              className={cn(
+                "h-(--size-control) rounded-md border text-base font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                role === r ? "border-accent bg-accent-soft text-accent" : "border-border text-text-muted",
+              )}
+            >
+              {r === "customer" ? "Customer" : "Admin"}
+            </button>
+          ))}
+        </div>
+      </fieldset>
       {notice && (
         <p role="alert" className="text-sm text-danger">
           {notice}
@@ -86,9 +106,6 @@ export function LoginScreen({
       <Button type="submit" disabled={!valid} loading={submitting}>
         {submitting ? "Logging in" : "Log in"}
       </Button>
-      <p className="text-center text-base">
-        No account? <TextButton onClick={onSwitchToSignup}>Sign up</TextButton>
-      </p>
     </form>
   );
 }

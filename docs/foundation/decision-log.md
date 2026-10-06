@@ -487,3 +487,26 @@ Option A. "Discard your unsaved changes?" when leaving either editor or opening 
 - The first two items in #14 and #15's lists no longer apply; the step-removal warning replaces the third. A published simulation under a draft guide still gets no hint.
 - Admin editors track unsaved edits in a ref set by the form and read by the screen's Back button. A new editing path must call the form's touch/edited helper or it will not count as unsaved.
 - Typecheck passes. Not run in a browser.
+
+### #17
+**Date:** 2026-10-06
+**Milestone:** Visual redesign to the human's screenshots (amends #6 and the style rules in ux-ui-guidelines.md)
+
+**Context:**
+The human supplied screenshots of a separate prototype (split-screen login and sign up, customer overview, admin overview, left sidebar) and asked for them to be applied to this project. They conflicted with #6 (no sidebar, no separate desktop design), the no-gradient rule, and the three-size type scale. The conflicts were listed and two directions offered: A, restyle inside the existing guidelines; B, follow the screenshots and update the guidelines. The AI recommended A.
+
+**Options Considered:**
+- A: Restyle within the guidelines, keep the top bar, no role toggle.
+- B: Follow the screenshots and amend the guidelines and this log.
+
+**Community Consensus:**
+Not searched. The human chose B explicitly.
+
+**Decision:**
+Option B. Phones keep the bottom tab bar. From md up the tabs move to a fixed left sidebar (width --size-sidebar), the header holds the breadcrumb and account actions. Login and sign up share one split-screen layout (brand panel from lg up) with a Log in / Sign up tab switch. Login has a Customer / Admin choice that only picks which workspace opens first: admin status still comes from profiles.role (#3) and the database enforces every write. A non-admin who picks Admin lands in the customer workspace with a notice. Admins get an Overview page and a Preview customer / Back to admin switch. Overview pages are new: customer (welcome, hero, three stats, device list) and admin (four counts, latest guides). Tokens added: accent-soft, brand, brand-light, brand-text, text-xl (2.5rem, the permitted fourth size, used for hero headlines), size-sidebar, shadow-card. Accent changed from #15803d to #1d6b4f. Gradients are allowed only on the brand panel and the customer hero. Everything else (400/600 weights, 8px and 16px radius tokens, no glows, no single-side borders, Phosphor icons, no emoji) is unchanged.
+
+**Consequences:**
+- #6's "no sidebar, no separate desktop design" no longer holds at md and up. Phone design is unchanged in structure.
+- The screenshots' full name and confirm password fields on sign up, Saved guides, Device Diagnosis, Devices, Diagnosis rules, Customers and Reports pages were not built: no backing tables or screens exist yet.
+- Stat cards, hero and the list on the admin overview use shadow-card; the screenshots' extra card nesting was not copied (no card inside a card).
+- Typecheck passes. ESLint and a browser run were not possible in the build environment. Not run against a live Supabase project.

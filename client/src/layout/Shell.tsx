@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Icon } from "@phosphor-icons/react";
+import { Wrench } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 export type NavTab = { id: string; label: string; icon: Icon };
@@ -8,12 +9,12 @@ type Nav = { tabs: NavTab[]; active: string; onChange: (id: string) => void };
 const focus =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
-// One tab button, drawn two ways: a pill in the top bar (md and up) or a
+// One tab button, drawn two ways: a row in the left sidebar (md and up) or a
 // stacked icon and label in the bottom bar (phones).
 const TAB_STYLE = {
-  top: {
-    base: "flex h-10 items-center gap-2 rounded-md px-4 text-base font-semibold",
-    active: "bg-surface-secondary text-accent",
+  side: {
+    base: "flex h-12 w-full items-center gap-3 rounded-md px-4 text-base font-semibold",
+    active: "bg-accent-soft text-accent",
     idle: "text-text-muted hover:text-text",
   },
   bottom: {
@@ -43,43 +44,62 @@ function TabButton({
   );
 }
 
-// Layout shell. Header size and position are fixed (--size-header) and never
-// change between screens. Only the content area changes.
-// `account` is the top-right slot (log out, later profile).
-// `nav` (signed in only): bottom tab bar on phones, top bar from md up
-// (decision-log.md #6). Both render from the same tab list.
+// Layout shell. Header and sidebar sizes are fixed (--size-header, --size-sidebar)
+// and never change between screens. Only the content area changes.
+// `account` is the top-right slot (log out, workspace switch).
+// `workspace` names the area in the sidebar and breadcrumb.
+// `nav` (signed in only): bottom tab bar on phones, left sidebar from md up
+// (decision-log.md #17). Both render from the same tab list.
+// `wide` gives dashboard pages room; other screens keep the narrow column.
 export function Shell({
   account,
   nav,
+  workspace,
+  wide,
   children,
 }: Readonly<{
   account?: ReactNode;
   nav?: Nav;
+  workspace?: string;
+  wide?: boolean;
   children: ReactNode;
 }>) {
+  const activeLabel = nav?.tabs.find((t) => t.id === nav.active)?.label;
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="flex h-(--size-header) shrink-0 items-center justify-between border-b border-border px-4">
-        <div className="flex items-center gap-8">
-          <span className="text-base font-semibold">LunasTech</span>
-          {nav && (
-            <nav aria-label="Main" className="hidden items-center gap-2 md:flex">
-              {nav.tabs.map((tab) => (
-                <TabButton key={tab.id} tab={tab} nav={nav} variant="top" />
-              ))}
-            </nav>
+    <div className={cn("min-h-dvh", nav && "md:grid md:grid-cols-[var(--size-sidebar)_1fr]")}>
+      {nav && (
+        <aside className="sticky top-0 hidden h-dvh flex-col gap-2 border-r border-border bg-surface p-4 md:flex">
+          <span className="flex h-12 items-center gap-2 px-4 text-base font-semibold">
+            <Wrench className="size-6 text-accent" aria-hidden="true" />
+            LunasTech
+          </span>
+          <nav aria-label="Main" className="flex flex-col gap-2">
+            {nav.tabs.map((tab) => (
+              <TabButton key={tab.id} tab={tab} nav={nav} variant="side" />
+            ))}
+          </nav>
+        </aside>
+      )}
+      <div className="flex min-h-dvh min-w-0 flex-col">
+        <header className="flex h-(--size-header) shrink-0 items-center justify-between border-b border-border px-4 md:px-8">
+          <span className="text-base font-semibold md:hidden">LunasTech</span>
+          {nav && workspace && (
+            <span className="hidden text-base text-text-muted md:block">
+              {workspace} / <span className="font-semibold text-text">{activeLabel}</span>
+            </span>
           )}
-        </div>
-        {account}
-      </header>
-      <main
-        className={cn(
-          "mx-auto flex w-full max-w-sm flex-1 flex-col px-4 pt-12 md:pt-24",
-          nav && "pb-(--size-tab-bar) md:pb-0",
-        )}
-      >
-        {children}
-      </main>
+          {account}
+        </header>
+        <main
+          className={cn(
+            "mx-auto flex w-full flex-1 flex-col px-4 pt-8 md:px-8 md:pt-12",
+            wide ? "max-w-6xl" : "max-w-sm md:max-w-md",
+            nav ? "pb-(--size-tab-bar) md:pb-12" : "",
+          )}
+        >
+          {children}
+        </main>
+      </div>
       {nav && (
         <nav
           aria-label="Main"

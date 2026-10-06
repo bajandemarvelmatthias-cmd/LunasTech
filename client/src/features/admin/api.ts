@@ -281,3 +281,12 @@ export async function setSimulationStatus(simulationId: string, status: Status):
   const { error } = await supabase.from("simulations").update({ status }).eq("id", simulationId);
   if (error) throw error;
 }
+
+// Admins can read every profile (row level security); this only counts them.
+export async function fetchUserCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true });
+  if (error) throw error;
+  return count ?? 0;
+}
