@@ -1,10 +1,10 @@
 import { useRef, useState, type RefObject } from "react";
-import { TextButton } from "@/components/ui/Button";
+import { Check } from "@phosphor-icons/react";
+import { Button, OutlineButton, TextButton } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/TextArea";
 import { TextField } from "@/components/ui/TextField";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { fetchDevices } from "@/features/guides/api";
 import {
   DIFFICULTY_LABEL,
   KIND_LABEL,
@@ -13,23 +13,25 @@ import {
   type GuideStep,
 } from "@/features/guides/types";
 import { useLoad } from "@/lib/useLoad";
+import { confirmDiscard, EditorFrame, useEditorActions } from "./editorParts";
 import { ImageField } from "./ImageField";
 import {
-  AddStepButton,
-  confirmDiscard,
-  EditorFrame,
-  RemoveStepButton,
-  SaveBar,
-  useEditorActions,
-} from "./editorParts";
-import {
   createSymptom,
+  fetchDeviceOptions,
   fetchGuideDetail,
   fetchSymptomOptions,
   saveGuide,
   setGuideStatus,
 } from "./api";
-import { STATUS_LABEL, type GuideDetail, type Status, type StepDraft, type SymptomOption } from "./types";
+import {
+  CATEGORY_LABEL,
+  STATUS_LABEL,
+  type DeviceOption,
+  type GuideDetail,
+  type Status,
+  type StepDraft,
+  type SymptomOption,
+} from "./types";
 
 const BLANK: GuideDetail = {
   id: null,
@@ -44,6 +46,11 @@ const BLANK: GuideDetail = {
   steps: [],
 };
 
+// A new guide starts with four empty steps to fill in.
+const NEW_GUIDE_STEPS = 4;
+const MAX_STEPS = 30;
+const blankStep = (): StepDraft => ({ id: null, title: "", instruction: "", imagePath: null });
+
 const KIND_OPTIONS = (Object.keys(KIND_LABEL) as GuideKind[]).map((k) => ({
   value: k,
   label: KIND_LABEL[k],
@@ -54,23 +61,26 @@ const DIFFICULTY_OPTIONS = [
   ...(Object.keys(DIFFICULTY_LABEL) as GuideDifficulty[]).map((d) => ({ value: d, label: DIFFICULTY_LABEL[d] })),
 ];
 
+const STATUS_OPTIONS = (Object.keys(STATUS_LABEL) as Status[]).map((s) => ({ value: s, label: STATUS_LABEL[s] }));
+
 type Props = {
   guideId: string | null;
   onBack: () => void;
   onSimulations: (guideId: string) => void;
 };
 
-// Loads the guide (or a blank one) and the symptom list, then hands over to the form.
+// Loads the guide (or a blank one), the devices and the symptoms, then hands over to the form.
 export function GuideEditor({ guideId, onBack, onSimulations }: Readonly<Props>) {
   // The form sets this when something is edited and clears it on save.
   const dirty = useRef(false);
   const { data, loading, error, retry } = useLoad(
     async () => {
-      const [detail, symptoms] = await Promise.all([
+      const [detail, symptoms, devices] = await Promise.all([
         guideId ? fetchGuideDetail(guideId) : Promise.resolve(BLANK),
         fetchSymptomOptions(),
+        fetchDeviceOptions(),
       ]);
-      return { detail, symptoms };
+      return { detail, symptoms, devices };
     },
     [guideId],
   );
@@ -85,7 +95,14 @@ export function GuideEditor({ guideId, onBack, onSimulations }: Readonly<Props>)
       onRetry={retry}
     >
       {data && (
-        <EditorForm detail={data.detail} symptoms={data.symptoms} dirty={dirty} onSimulations={onSimulations} />
+        <EditorForm
+          detail={data.detail}
+          symptoms={data.symptoms}
+          devices={data.devices}
+          dirty={dirty}
+          onBack={onBack}
+          onSimulations={onSimulations}
+        />
       )}
     </EditorFrame>
   );
@@ -94,47 +111,78 @@ export function GuideEditor({ guideId, onBack, onSimulations }: Readonly<Props>)
 const toDrafts = (steps: GuideStep[]): StepDraft[] =>
   steps.map((s) => ({ id: s.id, title: s.title, instruction: s.instruction, imagePath: s.image_path }));
 
-function EditorForm({
-  detail,
-  symptoms: initialSymptoms,
-  dirty,
-  onSimulations,
-}: Readonly<{
+type FormProps = {
   detail: GuideDetail;
   symptoms: SymptomOption[];
+  devices: DeviceOption[];
   dirty: RefObject<boolean>;
+  onBack: () => void;
   onSimulations: (guideId: string) => void;
-}>) {
+};
+
+function EditorForm({ detail, symptoms: initialSymptoms, devices, dirty, onBack, onSimulations }: Readonly<FormProps>) {
   const { session } = useAuth();
   const userId = session?.user.id ?? "";
 
   const [guideId, setGuideId] = useState(detail.id);
   const [status, setStatus] = useState<Status>(detail.status);
+  const [statusChoice, setStatusChoice] = useState<Status>(detail.status);
   const [original, setOriginal] = useState<GuideStep[]>(detail.steps);
   const [title, setTitle] = useState(detail.title);
   const [description, setDescription] = useState(detail.description);
+  const [symptoms, setSymptoms] = useState(initialSymptoms);
   const [symptomId, setSymptomId] = useState(detail.symptomId);
+  const [deviceId, setDeviceId] = useState(
+    () => initialSymptoms.find((s) => s.id === detail.symptomId)?.deviceId ?? "",
+  );
   const [kind, setKind] = useState<GuideKind>(detail.kind);
   const [difficulty, setDifficulty] = useState<GuideDifficulty | "">(detail.difficulty ?? "");
   const [minutes, setMinutes] = useState(detail.estimatedMinutes ? String(detail.estimatedMinutes) : "");
   const [coverPath, setCoverPath] = useState<string | null>(detail.coverImagePath);
-  const [drafts, setDrafts] = useState<StepDraft[]>(toDrafts(detail.steps));
-  const [symptoms, setSymptoms] = useState(initialSymptoms);
+  const [drafts, setDrafts] = useState<StepDraft[]>(() =>
+    detail.id ? toDrafts(detail.steps) : Array.from({ length: NEW_GUIDE_STEPS }, blankStep),
+  );
+  const [stepsText, setStepsText] = useState(String(drafts.length));
+
+  const device = devices.find((d) => d.id === deviceId);
+  const categoryLabel = device ? (device.category ? CATEGORY_LABEL[device.category] : "Not set") : "Choose a device first";
 
   function updateDraft(index: number, patch: Partial<StepDraft>) {
     touch();
     setDrafts((list) => list.map((d, i) => (i === index ? { ...d, ...patch } : d)));
   }
 
+  // "Planned repair steps": adds empty steps or removes steps from the end.
+  // Applied when the field loses focus so typing "12" does not pass through "1".
+  function applySteps() {
+    const n = Number(stepsText);
+    if (!/^\d{1,2}$/.test(stepsText) || n > MAX_STEPS) {
+      setStepsText(String(drafts.length));
+      return;
+    }
+    if (n === drafts.length) return;
+    if (n > drafts.length) {
+      edit(() => setDrafts((list) => [...list, ...Array.from({ length: n - list.length }, blankStep)]));
+      return;
+    }
+    const hasWork = drafts.slice(n).some((d) => d.id || d.title.trim() || d.instruction.trim() || d.imagePath);
+    if (hasWork && !window.confirm(`Remove ${drafts.length - n} step(s) from the end?`)) {
+      setStepsText(String(drafts.length));
+      return;
+    }
+    edit(() => setDrafts((list) => list.slice(0, n)));
+  }
+
   // Returns a problem to show, or null when everything needed is filled in.
   function problem(): string | null {
     if (!title.trim()) return "Enter a title.";
+    if (!deviceId) return "Choose a device.";
     if (!symptomId) return "Choose a symptom.";
     if (minutes.trim() && !/^[1-9]\d{0,3}$/.test(minutes.trim())) {
       return "Enter the time as a whole number of minutes.";
     }
     if (drafts.some((d) => !d.title.trim() || !d.instruction.trim())) {
-      return "Every step needs a title and an instruction.";
+      return "Every step needs a title and an instruction. Lower the number of steps to remove empty ones.";
     }
     return null;
   }
@@ -157,6 +205,7 @@ function EditorForm({
     setGuideId(saved.id);
     setOriginal(saved.steps);
     setDrafts(toDrafts(saved.steps));
+    setStepsText(String(saved.steps.length));
     return saved.id;
   }
 
@@ -170,49 +219,98 @@ function EditorForm({
     writeStatus: setGuideStatus,
   });
 
+  // The publication status chosen in the form is applied together with the save.
+  const onSave = () => void (statusChoice === status ? save() : toggleStatus());
+
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-lg font-semibold">{guideId ? "Edit guide" : "New guide"}</h1>
-      <p className="text-sm text-text-muted">{STATUS_LABEL[status]}</p>
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-semibold uppercase tracking-widest text-text-muted">Repair guides</p>
+        <h1 className="text-lg font-semibold">
+          {guideId ? "Edit guide" : "Create guide"}
+          <span className="text-accent">.</span>
+        </h1>
+        <p className="text-sm text-text-muted">A clear guide is the first step to a confident repair.</p>
+      </div>
 
-      <TextField label="Title" value={title} onChange={(e) => edit(() => setTitle(e.target.value))} />
-      <TextArea
-        label="Description (optional)"
-        rows={3}
-        value={description}
-        onChange={(e) => edit(() => setDescription(e.target.value))}
-      />
+      <TextField label="Guide title" value={title} onChange={(e) => edit(() => setTitle(e.target.value))} />
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Select
+          label="Device / model"
+          value={deviceId}
+          placeholder="Choose a device"
+          options={devices.map((d) => ({ value: d.id, label: d.archived ? `${d.name} (archived)` : d.name }))}
+          onChange={(e) =>
+            edit(() => {
+              setDeviceId(e.target.value);
+              setSymptomId("");
+            })
+          }
+        />
+        <Select
+          label="Device category"
+          value=""
+          disabled
+          options={[{ value: "", label: categoryLabel }]}
+          onChange={() => undefined}
+        />
+      </div>
+
       <Select
         label="Symptom"
         value={symptomId}
-        placeholder="Choose a symptom"
-        options={symptoms.map((s) => ({ value: s.id, label: s.label }))}
+        placeholder={deviceId ? "Choose a symptom" : "Choose a device first"}
+        disabled={!deviceId}
+        options={symptoms.filter((s) => s.deviceId === deviceId).map((s) => ({ value: s.id, label: s.name }))}
         onChange={(e) => edit(() => setSymptomId(e.target.value))}
       />
-      <NewSymptom
-        onCreated={(id, list) => {
-          setSymptoms(list);
-          setSymptomId(id);
-          touch();
-        }}
-      />
-      <Select
-        label="Kind"
-        value={kind}
-        options={KIND_OPTIONS}
-        onChange={(e) => edit(() => setKind(e.target.value as GuideKind))}
-      />
-      <Select
-        label="Difficulty"
-        value={difficulty}
-        options={DIFFICULTY_OPTIONS}
-        onChange={(e) => edit(() => setDifficulty(e.target.value as GuideDifficulty | ""))}
-      />
-      <TextField
-        label="Estimated time (minutes)"
-        inputMode="numeric"
-        value={minutes}
-        onChange={(e) => edit(() => setMinutes(e.target.value))}
+      {deviceId && (
+        <NewSymptom
+          deviceId={deviceId}
+          onCreated={(id, list) => {
+            setSymptoms(list);
+            setSymptomId(id);
+            touch();
+          }}
+        />
+      )}
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Select
+          label="Difficulty"
+          value={difficulty}
+          options={DIFFICULTY_OPTIONS}
+          onChange={(e) => edit(() => setDifficulty(e.target.value as GuideDifficulty | ""))}
+        />
+        <TextField
+          label="Estimated time (minutes)"
+          inputMode="numeric"
+          help="For example: 30"
+          value={minutes}
+          onChange={(e) => edit(() => setMinutes(e.target.value))}
+        />
+        <TextField
+          label="Planned repair steps"
+          inputMode="numeric"
+          help="Steps are written below."
+          value={stepsText}
+          onChange={(e) => setStepsText(e.target.value)}
+          onBlur={applySteps}
+        />
+        <Select
+          label="Guide type"
+          value={kind}
+          options={KIND_OPTIONS}
+          onChange={(e) => edit(() => setKind(e.target.value as GuideKind))}
+        />
+      </div>
+
+      <TextArea
+        label="Guide description"
+        rows={4}
+        value={description}
+        onChange={(e) => edit(() => setDescription(e.target.value))}
       />
       <ImageField
         label="Cover photo"
@@ -221,6 +319,7 @@ function EditorForm({
         onChange={(path) => edit(() => setCoverPath(path))}
       />
 
+      {drafts.length > 0 && <h2 className="border-t border-border pt-6 text-base font-semibold">Steps</h2>}
       {drafts.map((d, i) => (
         <fieldset key={d.id ?? `new-${i}`} className="flex flex-col gap-4">
           <legend className="mb-2 text-sm font-semibold">Step {i + 1}</legend>
@@ -236,22 +335,37 @@ function EditorForm({
             path={d.imagePath}
             onChange={(path) => updateDraft(i, { imagePath: path })}
           />
-          {i === drafts.length - 1 && (
-            <RemoveStepButton number={i + 1} onRemove={() => edit(() => setDrafts((list) => list.slice(0, -1)))} />
-          )}
         </fieldset>
       ))}
-      <AddStepButton
-        onAdd={() => edit(() => setDrafts((list) => [...list, { id: null, title: "", instruction: "", imagePath: null }]))}
+
+      <Select
+        label="Publication status"
+        value={statusChoice}
+        options={STATUS_OPTIONS}
+        onChange={(e) => edit(() => setStatusChoice(e.target.value as Status))}
       />
 
-      <SaveBar message={message} busy={busy} status={status} onSave={save} onToggleStatus={toggleStatus} />
+      {message && (
+        <p
+          role={message.error ? "alert" : "status"}
+          className={message.error ? "text-sm text-danger" : "text-sm text-text-muted"}
+        >
+          {message.text}
+        </p>
+      )}
+      <div className="flex items-center justify-end gap-4 border-t border-border pt-6">
+        <OutlineButton onClick={() => confirmDiscard(dirty, onBack)} disabled={busy}>
+          Cancel
+        </OutlineButton>
+        <Button className="flex w-auto items-center justify-center gap-2" onClick={onSave} loading={busy}>
+          <Check className="size-5" aria-hidden="true" />
+          {busy ? "Saving" : "Save guide"}
+        </Button>
+      </div>
+
       {guideId && (
         <p className="text-center text-base">
-          <TextButton
-            onClick={() => confirmDiscard(dirty, () => onSimulations(guideId))}
-            disabled={busy}
-          >
+          <TextButton onClick={() => confirmDiscard(dirty, () => onSimulations(guideId))} disabled={busy}>
             Simulations
           </TextButton>
         </p>
@@ -260,20 +374,20 @@ function EditorForm({
   );
 }
 
-// Symptoms must exist before a guide can use them, and the table starts empty.
+// Symptoms must exist before a guide can use them. The new symptom belongs to
+// the device already chosen in the form.
 function NewSymptom({
+  deviceId,
   onCreated,
-}: Readonly<{ onCreated: (id: string, list: SymptomOption[]) => void }>) {
+}: Readonly<{ deviceId: string; onCreated: (id: string, list: SymptomOption[]) => void }>) {
   const [open, setOpen] = useState(false);
-  const [deviceId, setDeviceId] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { data: devices } = useLoad(fetchDevices, []);
 
   async function add() {
-    if (!deviceId || !name.trim()) {
-      setError("Choose a device and enter a name.");
+    if (!name.trim()) {
+      setError("Enter a symptom name.");
       return;
     }
     setBusy(true);
@@ -299,13 +413,6 @@ function NewSymptom({
   }
   return (
     <div className="flex flex-col gap-4 rounded-md bg-surface-secondary p-4">
-      <Select
-        label="Device"
-        value={deviceId}
-        placeholder="Choose a device"
-        options={(devices ?? []).map((d) => ({ value: d.id, label: d.name }))}
-        onChange={(e) => setDeviceId(e.target.value)}
-      />
       <TextField label="Symptom name" value={name} onChange={(e) => setName(e.target.value)} error={error ?? undefined} />
       <div className="flex gap-6">
         <TextButton onClick={add} disabled={busy}>

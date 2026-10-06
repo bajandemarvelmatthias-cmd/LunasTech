@@ -17,7 +17,11 @@ export type AdminGuideRow = {
 // Status filter on the guides list. The overview opens it on "draft".
 export type GuideFilter = "all" | Status;
 
-export type SymptomOption = { id: string; label: string };
+export type SymptomOption = { id: string; label: string; name: string; deviceId: string };
+
+// A device as the guide editor offers it. Archived devices stay selectable so
+// an existing guide on one can still be edited.
+export type DeviceOption = { id: string; name: string; category: DeviceCategory | null; archived: boolean };
 
 export type GuideDetail = {
   id: string | null;

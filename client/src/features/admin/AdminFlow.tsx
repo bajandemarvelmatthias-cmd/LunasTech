@@ -14,8 +14,8 @@ type Route =
   | { name: "sim"; guideId: string; simulationId: string | null; from: "all" | "guide" };
 
 // Forms stay a narrow centered column inside the wide admin page.
-function Narrow({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="mx-auto w-full max-w-md">{children}</div>;
+function Narrow({ children, wide = false }: Readonly<{ children: ReactNode; wide?: boolean }>) {
+  return <div className={wide ? "mx-auto w-full max-w-2xl" : "mx-auto w-full max-w-md"}>{children}</div>;
 }
 
 // The Guides and Simulations sections of the admin workspace.
@@ -34,7 +34,7 @@ export function AdminFlow({
   switch (route.name) {
     case "edit":
       return (
-        <Narrow>
+        <Narrow wide>
           <GuideEditor
             guideId={route.guideId}
             onBack={() => setRoute({ name: "list" })}

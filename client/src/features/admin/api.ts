@@ -6,6 +6,7 @@ import type {
   AdminGuideRow,
   CustomerRow,
   DeviceFields,
+  DeviceOption,
   DeviceSummary,
   GuideDetail,
   SimStepDraft,
@@ -57,14 +58,30 @@ export async function fetchAdminGuides(): Promise<AdminGuideRow[]> {
   }));
 }
 
-type SymptomQuery = { id: string; name: string; device_types: { name: string } | null };
+type SymptomQuery = { id: string; name: string; device_type_id: string; device_types: { name: string } | null };
 
 export async function fetchSymptomOptions(): Promise<SymptomOption[]> {
-  const { data, error } = await supabase.from("symptoms").select("id, name, device_types(name)");
+  const { data, error } = await supabase.from("symptoms").select("id, name, device_type_id, device_types(name)");
   if (error) throw error;
   return (data as unknown as SymptomQuery[])
-    .map((s) => ({ id: s.id, label: `${s.device_types?.name ?? ""} · ${s.name}` }))
+    .map((s) => ({
+      id: s.id,
+      label: `${s.device_types?.name ?? ""} · ${s.name}`,
+      name: s.name,
+      deviceId: s.device_type_id,
+    }))
     .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+export async function fetchDeviceOptions(): Promise<DeviceOption[]> {
+  const { data, error } = await supabase
+    .from("device_types")
+    .select("id, name, category, status")
+    .order("name");
+  if (error) throw error;
+  return (data as unknown as { id: string; name: string; category: DeviceOption["category"]; status: string }[]).map(
+    (d) => ({ id: d.id, name: d.name, category: d.category, archived: d.status === "archived" }),
+  );
 }
 
 export async function createSymptom(deviceId: string, name: string): Promise<string> {

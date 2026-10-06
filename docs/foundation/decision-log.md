@@ -666,3 +666,30 @@ Option B (migration 20261006010000_catalog_fields.sql, run in the Supabase SQL e
 - Run the migration before using the new app code; the app reads the new columns.
 - Customer device list now filters on device_types.status; the guide editor's New symptom device picker uses the same list, so archived devices are not offered there.
 - Typecheck passes. Not run in a browser or against a live Supabase project.
+
+### #24
+**Date:** 2026-10-06
+**Milestone:** Guide form laid out like the Create guide design (amends #22, #23)
+
+**Context:**
+The human supplied the Create guide dialog from the design export (title, device / model and category, difficulty, estimated time, planned repair steps, description, cover image URL, publication status, Cancel and Save guide) and asked for that setup.
+
+**Options Considered:**
+- A: Show it as a pop-up over the guides list.
+- B: Keep the guide editor as a page (it also holds the steps and their photos) and lay out its fields like the design.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation.
+
+**Decision:**
+Option B. No schema change, no new dependency.
+- Device / model is a choice of the existing devices; Device category shows that device's category and is not editable (it follows the device). The symptom list is filtered to the chosen device, because every guide belongs to a symptom. New symptom adds one to the chosen device.
+- Planned repair steps adds empty steps or removes steps from the end when the field loses focus (a new guide starts with four). Add step and Remove step are gone from this form.
+- Cover photo is an upload (#22), not a URL. Guide type (small fix or major repair) stays because the database requires it.
+- Publication status is chosen in the form and applied with Save guide, which saves first. The separate Publish / Move to drafts link is gone from the guide form (the simulation form still has it).
+- The form is a wider column (max-w-2xl) inside the admin page.
+
+**Consequences:**
+- Saving still needs every step to have a title and an instruction; lower Planned repair steps to drop empty ones.
+- Removing steps with text or a photo asks for confirmation.
+- Typecheck passes. Not run in a browser or against a live Supabase project.
