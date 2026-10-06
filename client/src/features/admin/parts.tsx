@@ -43,7 +43,8 @@ export function FilterTabs<T extends string>({
   onChange,
 }: Readonly<{ options: FilterOption<T>[]; value: T; onChange: (value: T) => void }>) {
   return (
-    <div role="group" aria-label="Filter" className="flex flex-wrap gap-2">
+    <fieldset className="m-0 flex min-w-0 flex-wrap gap-2 border-0 p-0">
+      <legend className="sr-only">Filter</legend>
       {options.map((o) => (
         <button
           key={o.value}
@@ -60,7 +61,7 @@ export function FilterTabs<T extends string>({
           <span className="text-sm">{o.count}</span>
         </button>
       ))}
-    </div>
+    </fieldset>
   );
 }
 

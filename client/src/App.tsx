@@ -34,7 +34,7 @@ const ADMIN_TABS: NavTab[] = [
 
 // Log out sits top right in both workspaces.
 const LOG_OUT = (
-  <TextButton onClick={() => supabase.auth.signOut()}>Log out</TextButton>
+  <TextButton onClick={() => void supabase.auth.signOut()}>Log out</TextButton>
 );
 
 // Admin workspace. Admins see only this; there is no way into the customer

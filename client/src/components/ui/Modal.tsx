@@ -6,8 +6,9 @@ const focus =
 
 // Centered modal for one focused task (ux-ui-guidelines.md, modal vs panel).
 // Built on the native dialog element: it traps focus, closes on Escape and
-// returns focus to the control that opened it. A click on the dim area also
-// closes it. Children mount only while open, so every opening starts blank.
+// returns focus to the control that opened it. The Close button is the other
+// way out, so nothing depends on a mouse. Children mount only while open, so
+// every opening starts blank.
 export function Modal({
   open,
   title,
@@ -27,10 +28,6 @@ export function Modal({
     <dialog
       ref={ref}
       onClose={onClose}
-      onClick={(e) => {
-        // The dialog element itself is only hit by the dim area; its content sits in the inner div.
-        if (e.target === e.currentTarget) onClose();
-      }}
       className="m-auto w-[calc(100%-2rem)] max-w-md rounded-lg border border-border bg-surface p-0 text-text shadow-card backdrop:bg-brand/60"
     >
       {open && (

@@ -131,7 +131,7 @@ function AddDeviceForm({ onSaved, onCancel }: Readonly<{ onSaved: () => void; on
   }
 
   return (
-    <form className="flex flex-col gap-6" onSubmit={submit}>
+    <form className="flex flex-col gap-6" onSubmit={(e) => void submit(e)}>
       <TextField
         label="Device name"
         value={name}
@@ -179,7 +179,7 @@ function AddSymptomForm({
   }
 
   return (
-    <form className="flex flex-col gap-6" onSubmit={submit}>
+    <form className="flex flex-col gap-6" onSubmit={(e) => void submit(e)}>
       <Select
         label="Device"
         placeholder="Choose a device"
