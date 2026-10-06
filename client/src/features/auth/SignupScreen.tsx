@@ -3,6 +3,7 @@ import { ArrowRight } from "@phosphor-icons/react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
+import { GoogleButton } from "./GoogleButton";
 import { authErrorMessage, EXISTING_ACCOUNT_MESSAGE } from "./errors";
 import { isValidEmail, isValidNewPassword, PASSWORD_MIN_LENGTH } from "./validation";
 
@@ -101,6 +102,7 @@ export function SignupScreen({ onConfirmationSent }: Readonly<Props>) {
         {submitting ? "Creating account" : "Create my account"}
         {!submitting && <ArrowRight className="size-6" aria-hidden="true" />}
       </Button>
+      <GoogleButton label="Sign up with Google" />
     </form>
   );
 }

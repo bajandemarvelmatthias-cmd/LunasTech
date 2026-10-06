@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { Button, TextButton } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { ArrowRight } from "@phosphor-icons/react";
+import { GoogleButton } from "./GoogleButton";
 import { authErrorMessage } from "./errors";
 import { isValidEmail } from "./validation";
 
@@ -90,6 +91,7 @@ export function LoginScreen({
         {submitting ? "Logging in" : "Log in to LunasTech"}
         {!submitting && <ArrowRight className="size-6" aria-hidden="true" />}
       </Button>
+      <GoogleButton label="Continue with Google" />
     </form>
   );
 }
