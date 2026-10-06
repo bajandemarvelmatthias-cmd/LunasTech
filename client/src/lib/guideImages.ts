@@ -7,7 +7,7 @@ const MAX_SIDE = 1600;
 // What the file picker offers: any image. Every photo is decoded and re-saved
 // as JPEG below, so the browser decides what it can read (JPG, PNG, WebP, GIF,
 // BMP, AVIF and so on), not a fixed list that can grey out a normal picture.
-export const IMAGE_ACCEPT = "image/*,.jpg,.jpeg,.jfif,.png,.webp,.gif,.bmp,.avif";
+export const IMAGE_ACCEPT = "image/*";
 
 // The chosen file is not a picture this browser can read.
 export class UnreadableImageError extends Error {}

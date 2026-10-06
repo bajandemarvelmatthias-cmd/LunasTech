@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type DragEvent } from "react";
 import { Plus } from "@phosphor-icons/react";
 import { TextButton } from "@/components/ui/Button";
 import { GuideImage } from "@/components/ui/GuideImage";
@@ -19,9 +19,23 @@ export function ImageField({ label, path, folder, onChange }: Readonly<Props>) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [over, setOver] = useState(false);
+
+  // Dropping a picture on the box uploads it. Without this the browser would
+  // leave the app and open the file instead.
+  function drop(e: DragEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    setOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file && !file.type.startsWith("image/")) {
+      setError("Only images can be uploaded. Drop a JPG, PNG or WebP photo.");
+      return;
+    }
+    void pick(file);
+  }
 
   async function pick(file: File | undefined) {
-    if (!file) return;
+    if (!file || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -29,7 +43,7 @@ export function ImageField({ label, path, folder, onChange }: Readonly<Props>) {
     } catch (err) {
       setError(
         err instanceof UnreadableImageError
-          ? "That file is not a picture this browser can open. Choose a JPG, PNG or WebP photo."
+          ? "That file could not be opened. Choose a JPG, PNG or WebP photo. If it is only stored on OneDrive, keep it on this device first."
           : "The photo could not be uploaded. Check your connection and try again.",
       );
       console.error("Photo upload failed:", err);
@@ -46,8 +60,14 @@ export function ImageField({ label, path, folder, onChange }: Readonly<Props>) {
         type="button"
         onClick={() => input.current?.click()}
         disabled={busy}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={drop}
         aria-label={path ? `Replace ${label.toLowerCase()}` : `Upload ${label.toLowerCase()}`}
-        className="relative aspect-video w-full overflow-hidden rounded-lg border border-border hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-wait"
+        className={`relative aspect-video w-full overflow-hidden rounded-lg border border-border hover:bg-surface-secondary ${over ? "bg-surface-secondary ring-2 ring-accent" : ""} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-wait`}
       >
         {path ? (
           <GuideImage path={path} placeholder className="size-full" />
