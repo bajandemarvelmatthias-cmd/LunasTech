@@ -1,6 +1,5 @@
 import { useRef, useState, type RefObject } from "react";
-import { BackButton } from "@/components/ui/BackButton";
-import { Button, TextButton } from "@/components/ui/Button";
+import { TextButton } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/TextArea";
 import { TextField } from "@/components/ui/TextField";
@@ -8,6 +7,14 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import { fetchDevices } from "@/features/guides/api";
 import { KIND_LABEL, type GuideKind, type GuideStep } from "@/features/guides/types";
 import { useLoad } from "@/lib/useLoad";
+import {
+  AddStepButton,
+  confirmDiscard,
+  EditorFrame,
+  RemoveStepButton,
+  SaveBar,
+  useEditorActions,
+} from "./editorParts";
 import {
   createSymptom,
   fetchGuideDetail,
@@ -38,8 +45,6 @@ type Props = {
 };
 
 // Loads the guide (or a blank one) and the symptom list, then hands over to the form.
-export const DISCARD_PROMPT = "Discard your unsaved changes?";
-
 export function GuideEditor({ guideId, onBack, onSimulations }: Readonly<Props>) {
   // The form sets this when something is edited and clears it on save.
   const dirty = useRef(false);
@@ -55,19 +60,18 @@ export function GuideEditor({ guideId, onBack, onSimulations }: Readonly<Props>)
   );
 
   return (
-    <div className="flex flex-col gap-6 pb-12">
-      <BackButton onClick={() => (!dirty.current || window.confirm(DISCARD_PROMPT)) && onBack()} />
-      {loading && <p className="text-base text-text-muted">Loading</p>}
-      {!loading && (error || !data) && (
-        <div className="flex flex-col gap-4">
-          <p role="alert" className="text-sm text-danger">
-            Can't load this guide. Check your connection and try again.
-          </p>
-          <Button onClick={retry}>Try again</Button>
-        </div>
+    <EditorFrame
+      dirty={dirty}
+      onBack={onBack}
+      loading={loading}
+      failed={Boolean(error) || !data}
+      errorText="Can't load this guide. Check your connection and try again."
+      onRetry={retry}
+    >
+      {data && (
+        <EditorForm detail={data.detail} symptoms={data.symptoms} dirty={dirty} onSimulations={onSimulations} />
       )}
-      {!loading && data && <EditorForm detail={data.detail} symptoms={data.symptoms} dirty={dirty} onSimulations={onSimulations} />}
-    </div>
+    </EditorFrame>
   );
 }
 
@@ -96,16 +100,9 @@ function EditorForm({
   const [kind, setKind] = useState<GuideKind>(detail.kind);
   const [drafts, setDrafts] = useState<StepDraft[]>(toDrafts(detail.steps));
   const [symptoms, setSymptoms] = useState(initialSymptoms);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
-
-  const edited = () => {
-    dirty.current = true;
-    setMessage(null);
-  };
 
   function updateDraft(index: number, patch: Partial<StepDraft>) {
-    edited();
+    touch();
     setDrafts((list) => list.map((d, i) => (i === index ? { ...d, ...patch } : d)));
   }
 
@@ -119,7 +116,7 @@ function EditorForm({
     return null;
   }
 
-  async function persist(): Promise<string | null> {
+  async function persist(): Promise<string> {
     const saved = await saveGuide({
       guideId,
       userId,
@@ -136,69 +133,41 @@ function EditorForm({
     return saved.id;
   }
 
-  async function run(action: () => Promise<string>) {
-    const found = problem();
-    if (found) {
-      setMessage({ text: found, error: true });
-      return;
-    }
-    setBusy(true);
-    try {
-      setMessage({ text: await action(), error: false });
-    } catch {
-      setMessage({ text: "Could not save. Check your connection and try again.", error: true });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const save = () =>
-    run(async () => {
-      await persist();
-      return "Saved";
-    });
-
-  // Publishing is the admin's decision (brief: approving and publishing).
-  // It saves first so what is published is what is on screen.
-  const toggleStatus = () => {
-    const next: Status = status === "published" ? "draft" : "published";
-    if (next === "published" && drafts.length === 0) {
-      setMessage({ text: "Add at least one step before publishing.", error: true });
-      return;
-    }
-    return run(async () => {
-      const id = await persist();
-      if (id) await setGuideStatus(id, next);
-      setStatus(next);
-      return next === "published" ? "Published" : "Moved to drafts";
-    });
-  };
+  const { busy, message, touch, save, toggleStatus } = useEditorActions({
+    dirty,
+    status,
+    setStatus,
+    stepCount: drafts.length,
+    problem,
+    persist,
+    writeStatus: setGuideStatus,
+  });
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-lg font-semibold">{guideId ? "Edit guide" : "New guide"}</h1>
       <p className="text-sm text-text-muted">{STATUS_LABEL[status]}</p>
 
-      <TextField label="Title" value={title} onChange={(e) => (edited(), setTitle(e.target.value))} />
+      <TextField label="Title" value={title} onChange={(e) => (touch(), setTitle(e.target.value))} />
       <Select
         label="Symptom"
         value={symptomId}
         placeholder="Choose a symptom"
         options={symptoms.map((s) => ({ value: s.id, label: s.label }))}
-        onChange={(e) => (edited(), setSymptomId(e.target.value))}
+        onChange={(e) => (touch(), setSymptomId(e.target.value))}
       />
       <NewSymptom
         onCreated={(id, list) => {
           setSymptoms(list);
           setSymptomId(id);
-          edited();
+          touch();
         }}
       />
       <Select
         label="Kind"
         value={kind}
         options={KIND_OPTIONS}
-        onChange={(e) => (edited(), setKind(e.target.value as GuideKind))}
+        onChange={(e) => (touch(), setKind(e.target.value as GuideKind))}
       />
 
       {drafts.map((d, i) => (
@@ -211,42 +180,19 @@ function EditorForm({
             onChange={(e) => updateDraft(i, { instruction: e.target.value })}
           />
           {i === drafts.length - 1 && (
-            <TextButton
-              className="self-start"
-              onClick={() => (edited(), setDrafts((list) => list.slice(0, -1)))}
-            >
-              Remove step {i + 1}
-            </TextButton>
+            <RemoveStepButton number={i + 1} onRemove={() => (touch(), setDrafts((list) => list.slice(0, -1)))} />
           )}
         </fieldset>
       ))}
-      <TextButton
-        className="self-start"
-        onClick={() => (edited(), setDrafts((list) => [...list, { id: null, title: "", instruction: "" }]))}
-      >
-        Add step
-      </TextButton>
+      <AddStepButton
+        onAdd={() => (touch(), setDrafts((list) => [...list, { id: null, title: "", instruction: "" }]))}
+      />
 
-      {message && (
-        <p
-          role={message.error ? "alert" : "status"}
-          className={message.error ? "text-sm text-danger" : "text-sm text-text-muted"}
-        >
-          {message.text}
-        </p>
-      )}
-      <Button onClick={save} loading={busy}>
-        {busy ? "Saving" : "Save"}
-      </Button>
-      <p className="text-center text-base">
-        <TextButton onClick={toggleStatus} disabled={busy}>
-          {status === "published" ? "Move to drafts" : "Publish"}
-        </TextButton>
-      </p>
+      <SaveBar message={message} busy={busy} status={status} onSave={save} onToggleStatus={toggleStatus} />
       {guideId && (
         <p className="text-center text-base">
           <TextButton
-            onClick={() => (!dirty.current || window.confirm(DISCARD_PROMPT)) && onSimulations(guideId)}
+            onClick={() => confirmDiscard(dirty, () => onSimulations(guideId))}
             disabled={busy}
           >
             Simulations

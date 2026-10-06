@@ -8,6 +8,41 @@ type Nav = { tabs: NavTab[]; active: string; onChange: (id: string) => void };
 const focus =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
+// One tab button, drawn two ways: a pill in the top bar (md and up) or a
+// stacked icon and label in the bottom bar (phones).
+const TAB_STYLE = {
+  top: {
+    base: "flex h-10 items-center gap-2 rounded-md px-4 text-base font-semibold",
+    active: "bg-surface-secondary text-accent",
+    idle: "text-text-muted hover:text-text",
+  },
+  bottom: {
+    base: "flex flex-col items-center justify-center gap-1 text-sm font-semibold",
+    active: "text-accent",
+    idle: "text-text-muted",
+  },
+} as const;
+
+function TabButton({
+  tab,
+  nav,
+  variant,
+}: Readonly<{ tab: NavTab; nav: Nav; variant: keyof typeof TAB_STYLE }>) {
+  const style = TAB_STYLE[variant];
+  const active = tab.id === nav.active;
+  return (
+    <button
+      type="button"
+      onClick={() => nav.onChange(tab.id)}
+      aria-current={active ? "page" : undefined}
+      className={cn(style.base, active ? style.active : style.idle, focus)}
+    >
+      <tab.icon className="size-6" aria-hidden="true" />
+      {tab.label}
+    </button>
+  );
+}
+
 // Layout shell. Header size and position are fixed (--size-header) and never
 // change between screens. Only the content area changes.
 // `account` is the top-right slot (log out, later profile).
@@ -29,25 +64,9 @@ export function Shell({
           <span className="text-base font-semibold">LunasTech</span>
           {nav && (
             <nav aria-label="Main" className="hidden items-center gap-2 md:flex">
-              {nav.tabs.map((tab) => {
-                const active = tab.id === nav.active;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => nav.onChange(tab.id)}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "flex h-10 items-center gap-2 rounded-md px-4 text-base font-semibold",
-                      active ? "bg-surface-secondary text-accent" : "text-text-muted hover:text-text",
-                      focus,
-                    )}
-                  >
-                    <tab.icon className="size-6" aria-hidden="true" />
-                    {tab.label}
-                  </button>
-                );
-              })}
+              {nav.tabs.map((tab) => (
+                <TabButton key={tab.id} tab={tab} nav={nav} variant="top" />
+              ))}
             </nav>
           )}
         </div>
@@ -66,25 +85,9 @@ export function Shell({
           aria-label="Main"
           className="fixed inset-x-0 bottom-0 z-10 grid h-(--size-tab-bar) auto-cols-fr grid-flow-col border-t border-border bg-surface md:hidden"
         >
-          {nav.tabs.map((tab) => {
-            const active = tab.id === nav.active;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => nav.onChange(tab.id)}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 text-sm font-semibold",
-                  active ? "text-accent" : "text-text-muted",
-                  focus,
-                )}
-              >
-                <tab.icon className="size-6" aria-hidden="true" />
-                {tab.label}
-              </button>
-            );
-          })}
+          {nav.tabs.map((tab) => (
+            <TabButton key={tab.id} tab={tab} nav={nav} variant="bottom" />
+          ))}
         </nav>
       )}
     </div>

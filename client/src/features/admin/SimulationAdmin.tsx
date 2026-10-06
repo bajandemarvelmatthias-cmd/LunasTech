@@ -1,12 +1,11 @@
 import { useRef, useState, type RefObject } from "react";
-import { BackButton } from "@/components/ui/BackButton";
 import { Button, TextButton } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/TextArea";
 import { TextField } from "@/components/ui/TextField";
 import { ListScreen } from "@/features/guides/ListScreen";
-import { DISCARD_PROMPT } from "./GuideEditor";
 import { useLoad } from "@/lib/useLoad";
+import { AddStepButton, EditorFrame, RemoveStepButton, SaveBar, useEditorActions } from "./editorParts";
 import {
   fetchAdminSimulations,
   fetchSimulationDetail,
@@ -58,19 +57,16 @@ export function SimulationEditor({
     [simulationId],
   );
   return (
-    <div className="flex flex-col gap-6 pb-12">
-      <BackButton onClick={() => (!dirty.current || window.confirm(DISCARD_PROMPT)) && onBack()} />
-      {loading && <p className="text-base text-text-muted">Loading</p>}
-      {!loading && (error || !data) && (
-        <div className="flex flex-col gap-4">
-          <p role="alert" className="text-sm text-danger">
-            Can't load this simulation. Check your connection and try again.
-          </p>
-          <Button onClick={retry}>Try again</Button>
-        </div>
-      )}
-      {!loading && data && <SimulationForm guideId={guideId} detail={data} dirty={dirty} />}
-    </div>
+    <EditorFrame
+      dirty={dirty}
+      onBack={onBack}
+      loading={loading}
+      failed={Boolean(error) || !data}
+      errorText="Can't load this simulation. Check your connection and try again."
+      onRetry={retry}
+    >
+      {data && <SimulationForm guideId={guideId} detail={data} dirty={dirty} />}
+    </EditorFrame>
   );
 }
 
@@ -95,13 +91,6 @@ function SimulationForm({
   const [original, setOriginal] = useState<SimStepFull[]>(detail.steps);
   const [title, setTitle] = useState(detail.title);
   const [drafts, setDrafts] = useState<SimStepDraft[]>(toDrafts(detail.steps));
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
-
-  function touch() {
-    dirty.current = true;
-    setMessage(null);
-  }
 
   function update(index: number, patch: Partial<SimStepDraft>) {
     touch();
@@ -130,6 +119,15 @@ function SimulationForm({
     return null;
   }
 
+  // Removing steps also deletes users' results for them, so ask first.
+  function approveRemoval(): boolean {
+    const removing = original.filter((o) => !drafts.some((d) => d.id === o.id)).length;
+    if (removing === 0) return true;
+    const what = removing === 1 ? "this step" : `these ${removing} steps`;
+    const them = removing === 1 ? "it" : "them";
+    return window.confirm(`Removing ${what} also deletes users' results for ${them}. Remove anyway?`);
+  }
+
   async function persist(): Promise<string> {
     const saved = await saveSimulation({
       simulationId,
@@ -150,51 +148,17 @@ function SimulationForm({
     return saved.id;
   }
 
-  async function run(action: () => Promise<string>) {
-    const found = problem();
-    if (found) {
-      setMessage({ text: found, error: true });
-      return;
-    }
-    const removing = original.filter((o) => !drafts.some((d) => d.id === o.id)).length;
-    if (
-      removing > 0 &&
-      !window.confirm(
-        `Removing ${removing === 1 ? "this step" : `these ${removing} steps`} also deletes users' results for ${removing === 1 ? "it" : "them"}. Remove anyway?`,
-      )
-    ) {
-      return;
-    }
-    setBusy(true);
-    try {
-      setMessage({ text: await action(), error: false });
-    } catch {
-      setMessage({ text: "Could not save. Check your connection and try again.", error: true });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const save = () =>
-    run(async () => {
-      await persist();
-      return "Saved";
-    });
-
   // Users only see a simulation when it and its guide are both published.
-  const toggleStatus = () => {
-    const next: Status = status === "published" ? "draft" : "published";
-    if (next === "published" && drafts.length === 0) {
-      setMessage({ text: "Add at least one step before publishing.", error: true });
-      return;
-    }
-    return run(async () => {
-      const id = await persist();
-      await setSimulationStatus(id, next);
-      setStatus(next);
-      return next === "published" ? "Published" : "Moved to drafts";
-    });
-  };
+  const { busy, message, touch, save, toggleStatus } = useEditorActions({
+    dirty,
+    status,
+    setStatus,
+    stepCount: drafts.length,
+    problem,
+    approve: approveRemoval,
+    persist,
+    writeStatus: setSimulationStatus,
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -203,10 +167,7 @@ function SimulationForm({
       <TextField
         label="Title"
         value={title}
-        onChange={(e) => {
-          touch();
-          setTitle(e.target.value);
-        }}
+        onChange={(e) => (touch(), setTitle(e.target.value))}
       />
 
       {drafts.map((d, i) => (
@@ -238,44 +199,13 @@ function SimulationForm({
           />
           <TextArea label="Feedback" rows={3} value={d.feedback} onChange={(e) => update(i, { feedback: e.target.value })} />
           {i === drafts.length - 1 && (
-            <TextButton
-              className="self-start"
-              onClick={() => {
-                touch();
-                setDrafts((list) => list.slice(0, -1));
-              }}
-            >
-              Remove step {i + 1}
-            </TextButton>
+            <RemoveStepButton number={i + 1} onRemove={() => (touch(), setDrafts((list) => list.slice(0, -1)))} />
           )}
         </fieldset>
       ))}
-      <TextButton
-        className="self-start"
-        onClick={() => {
-          touch();
-          setDrafts((list) => [...list, NEW_STEP]);
-        }}
-      >
-        Add step
-      </TextButton>
+      <AddStepButton onAdd={() => (touch(), setDrafts((list) => [...list, NEW_STEP]))} />
 
-      {message && (
-        <p
-          role={message.error ? "alert" : "status"}
-          className={message.error ? "text-sm text-danger" : "text-sm text-text-muted"}
-        >
-          {message.text}
-        </p>
-      )}
-      <Button onClick={save} loading={busy}>
-        {busy ? "Saving" : "Save"}
-      </Button>
-      <p className="text-center text-base">
-        <TextButton onClick={toggleStatus} disabled={busy}>
-          {status === "published" ? "Move to drafts" : "Publish"}
-        </TextButton>
-      </p>
+      <SaveBar message={message} busy={busy} status={status} onSave={save} onToggleStatus={toggleStatus} />
     </div>
   );
 }

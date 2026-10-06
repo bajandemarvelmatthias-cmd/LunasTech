@@ -82,6 +82,51 @@ export async function fetchGuideDetail(guideId: string): Promise<GuideDetail> {
   };
 }
 
+type StepTable = "guide_steps" | "simulation_steps";
+
+type SyncSteps<O extends { id: string; position: number }, D extends { id: string | null }> = {
+  table: StepTable;
+  original: O[];
+  drafts: D[];
+  // Drafts that cannot be written yet (for example no answer chosen) are left alone.
+  skip?: (draft: D) => boolean;
+  changed: (before: O, draft: D) => boolean;
+  toUpdate: (draft: D) => Record<string, unknown>;
+  toInsert: (draft: D, position: number) => Record<string, unknown>;
+};
+
+// Shared by guides and simulations. Steps can be edited in place, added at the
+// end, or removed from the end. Order of writes: delete, update, insert.
+async function syncSteps<O extends { id: string; position: number }, D extends { id: string | null }>(
+  opts: SyncSteps<O, D>,
+): Promise<void> {
+  const { table, original, drafts, skip = () => false } = opts;
+
+  const kept = new Set(drafts.filter((d) => d.id).map((d) => d.id));
+  const removed = original.filter((o) => !kept.has(o.id)).map((o) => o.id);
+  if (removed.length > 0) {
+    const { error } = await supabase.from(table).delete().in("id", removed);
+    if (error) throw error;
+  }
+
+  const byId = new Map(original.map((o) => [o.id, o]));
+  for (const d of drafts) {
+    const before = d.id ? byId.get(d.id) : undefined;
+    if (!d.id || !before || skip(d) || !opts.changed(before, d)) continue;
+    const { error } = await supabase.from(table).update(opts.toUpdate(d)).eq("id", d.id);
+    if (error) throw error;
+  }
+
+  const lastKept = Math.max(0, ...original.filter((o) => kept.has(o.id)).map((o) => o.position));
+  const added = drafts
+    .filter((d) => !d.id && !skip(d))
+    .map((d, i) => opts.toInsert(d, lastKept + 1 + i));
+  if (added.length > 0) {
+    const { error } = await supabase.from(table).insert(added);
+    if (error) throw error;
+  }
+}
+
 type SaveInput = {
   guideId: string | null;
   userId: string;
@@ -118,33 +163,14 @@ export async function saveGuide(input: SaveInput): Promise<{ id: string; steps: 
     id = data.id as string;
   }
 
-  const kept = new Set(drafts.filter((d) => d.id).map((d) => d.id));
-  const removed = original.filter((o) => !kept.has(o.id)).map((o) => o.id);
-  if (removed.length > 0) {
-    const { error } = await supabase.from("guide_steps").delete().in("id", removed);
-    if (error) throw error;
-  }
-
-  const byId = new Map(original.map((o) => [o.id, o]));
-  for (const d of drafts) {
-    const before = d.id ? byId.get(d.id) : undefined;
-    if (!d.id || !before) continue;
-    if (before.title === d.title && before.instruction === d.instruction) continue;
-    const { error } = await supabase
-      .from("guide_steps")
-      .update({ title: d.title, instruction: d.instruction })
-      .eq("id", d.id);
-    if (error) throw error;
-  }
-
-  const lastKept = Math.max(0, ...original.filter((o) => kept.has(o.id)).map((o) => o.position));
-  const added = drafts
-    .filter((d) => !d.id)
-    .map((d, i) => ({ guide_id: id, position: lastKept + 1 + i, title: d.title, instruction: d.instruction }));
-  if (added.length > 0) {
-    const { error } = await supabase.from("guide_steps").insert(added);
-    if (error) throw error;
-  }
+  await syncSteps({
+    table: "guide_steps",
+    original,
+    drafts,
+    changed: (before, d) => before.title !== d.title || before.instruction !== d.instruction,
+    toUpdate: (d) => ({ title: d.title, instruction: d.instruction }),
+    toInsert: (d, position) => ({ guide_id: id, position, title: d.title, instruction: d.instruction }),
+  });
 
   return { id, steps: await fetchGuideSteps(id) };
 }
@@ -215,45 +241,31 @@ export async function saveSimulation(
     id = data.id as string;
   }
 
-  const kept = new Set(drafts.filter((d) => d.id).map((d) => d.id));
-  const removed = original.filter((o) => !kept.has(o.id)).map((o) => o.id);
-  if (removed.length > 0) {
-    const { error } = await supabase.from("simulation_steps").delete().in("id", removed);
-    if (error) throw error;
-  }
-
-  const byId = new Map(original.map((o) => [o.id, o]));
-  for (const d of drafts) {
-    const before = d.id ? byId.get(d.id) : undefined;
-    if (!d.id || !before || d.correct === null) continue;
-    const same =
-      before.prompt === d.prompt &&
-      before.feedback === d.feedback &&
-      before.correct_option === d.correct &&
-      JSON.stringify(before.options) === JSON.stringify(d.options);
-    if (same) continue;
-    const { error } = await supabase
-      .from("simulation_steps")
-      .update({ prompt: d.prompt, options: d.options, correct_option: d.correct, feedback: d.feedback })
-      .eq("id", d.id);
-    if (error) throw error;
-  }
-
-  const lastKept = Math.max(0, ...original.filter((o) => kept.has(o.id)).map((o) => o.position));
-  const added = drafts
-    .filter((d) => !d.id && d.correct !== null)
-    .map((d, i) => ({
-      simulation_id: id,
-      position: lastKept + 1 + i,
+  await syncSteps({
+    table: "simulation_steps",
+    original,
+    drafts,
+    skip: (d) => d.correct === null,
+    changed: (before, d) =>
+      before.prompt !== d.prompt ||
+      before.feedback !== d.feedback ||
+      before.correct_option !== d.correct ||
+      JSON.stringify(before.options) !== JSON.stringify(d.options),
+    toUpdate: (d) => ({
       prompt: d.prompt,
       options: d.options,
       correct_option: d.correct,
       feedback: d.feedback,
-    }));
-  if (added.length > 0) {
-    const { error } = await supabase.from("simulation_steps").insert(added);
-    if (error) throw error;
-  }
+    }),
+    toInsert: (d, position) => ({
+      simulation_id: id,
+      position,
+      prompt: d.prompt,
+      options: d.options,
+      correct_option: d.correct,
+      feedback: d.feedback,
+    }),
+  });
 
   return { id, steps: await fetchAdminSimSteps(id) };
 }
