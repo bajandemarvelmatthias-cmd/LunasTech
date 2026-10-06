@@ -17,6 +17,12 @@ function deviceIcon(name: string): Icon {
   return DeviceMobile;
 }
 
+// "3 guides", "1 guide", or nothing while the counts are still loading.
+function guideCountLabel(count: number | null): string {
+  if (count === null) return "";
+  return `${count} ${count === 1 ? "guide" : "guides"}`;
+}
+
 function greeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -115,7 +121,7 @@ export function CustomerOverview({ onOpen }: Readonly<{ onOpen: (start?: GuidesS
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate text-base font-semibold">{d.name}</span>
-                      <span className="text-sm text-text-muted">{n === null ? "" : `${n} ${n === 1 ? "guide" : "guides"}`}</span>
+                      <span className="text-sm text-text-muted">{guideCountLabel(n)}</span>
                     </span>
                     <ArrowRight className="size-6 shrink-0 text-text-muted" aria-hidden="true" />
                   </button>
