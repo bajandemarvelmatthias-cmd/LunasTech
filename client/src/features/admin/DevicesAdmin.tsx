@@ -17,7 +17,15 @@ import { TextField } from "@/components/ui/TextField";
 import { LoadError } from "@/features/overview/parts";
 import { cn } from "@/lib/utils";
 import { useLoad } from "@/lib/useLoad";
-import { createDevice, createSymptom, deleteDevice, fetchDeviceSummaries, isDuplicate, updateDevice } from "./api";
+import {
+  createDevice,
+  createSymptom,
+  deleteDevice,
+  deleteDeviceAndGuides,
+  fetchDeviceSummaries,
+  isDuplicate,
+  updateDevice,
+} from "./api";
 import {
   DataList,
   EmptyNote,
@@ -32,7 +40,7 @@ import {
 import { CATEGORY_LABEL, type DeviceCategory, type DeviceFields, type DeviceStatus, type DeviceSummary } from "./types";
 
 const DEVICE_GRID =
-  "grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_144px_120px_144px_80px]";
+  "grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_144px_120px_144px_128px]";
 const SYMPTOM_GRID = "grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_200px_120px]";
 const ROW = "grid items-center gap-4 px-6 py-4";
 const SAVE_FAILED = "Could not save. Check your connection and try again.";
@@ -145,7 +153,40 @@ export function DevicesAdmin() {
     }
   }
 
-  // Restores an archived device that has guides.
+  // The bin on an archived device: delete it for good. With no guides that is
+  // one confirmation. With guides, they are deleted too (with their simulations
+  // and every customer's progress), so the admin must type the device name
+  // (decision-log.md #28).
+  async function destroy(d: DeviceSummary) {
+    const n = d.guides;
+    if (n === 0) {
+      await remove(d);
+      return;
+    }
+    const typed = window.prompt(
+      `Permanently delete ${d.name}?\n\nThis also deletes its ${n} ${n === 1 ? "guide" : "guides"}, their simulations and every customer's progress on them. This can't be undone.\n\nType the device name to confirm: ${d.name}`,
+    );
+    if (typed === null) return;
+    if (typed.trim() !== d.name) {
+      setRowError("The name didn't match, so nothing was deleted.");
+      return;
+    }
+    setWorkingId(d.id);
+    setRowError(undefined);
+    try {
+      await deleteDeviceAndGuides(
+        d.id,
+        d.symptoms.map((s) => s.id),
+      );
+      retry();
+    } catch {
+      setRowError("Could not delete. Check your connection and try again.");
+    } finally {
+      setWorkingId(undefined);
+    }
+  }
+
+  // Restores an archived device.
   async function restore(d: DeviceSummary) {
     setWorkingId(d.id);
     setRowError(undefined);
@@ -234,17 +275,29 @@ export function DevicesAdmin() {
                       >
                         <PencilSimple className="size-5" aria-hidden="true" />
                       </button>
-                      {d.guides > 0 && d.status === "archived" ? (
-                        <button
-                          type="button"
-                          onClick={() => void restore(d)}
-                          disabled={workingId === d.id}
-                          aria-label={`Restore ${d.name}`}
-                          title="Restore"
-                          className={ICON_BUTTON}
-                        >
-                          <ArrowCounterClockwise className="size-5" aria-hidden="true" />
-                        </button>
+                      {d.status === "archived" ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => void restore(d)}
+                            disabled={workingId === d.id}
+                            aria-label={`Restore ${d.name}`}
+                            title="Restore"
+                            className={ICON_BUTTON}
+                          >
+                            <ArrowCounterClockwise className="size-5" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void destroy(d)}
+                            disabled={workingId === d.id}
+                            aria-label={`Delete ${d.name} permanently`}
+                            title="Delete permanently"
+                            className={ICON_BUTTON}
+                          >
+                            <Trash className="size-5" aria-hidden="true" />
+                          </button>
+                        </>
                       ) : (
                         <button
                           type="button"

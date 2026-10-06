@@ -472,6 +472,19 @@ export async function deleteDevice(id: string): Promise<"deleted" | "blocked"> {
   return "deleted";
 }
 
+// Permanently deletes an archived device together with every guide that uses
+// it. Deleting a guide also deletes its steps, its simulations and every
+// customer's progress, attempts and saved marks for it (foreign keys cascade).
+// Guides go first because the database refuses to delete a device that still
+// has guides. If the device cannot be deleted after that, this throws.
+export async function deleteDeviceAndGuides(id: string, symptomIds: string[]): Promise<void> {
+  if (symptomIds.length > 0) {
+    const { error } = await supabase.from("guides").delete().in("symptom_id", symptomIds);
+    if (error) throw error;
+  }
+  if ((await deleteDevice(id)) === "blocked") throw new Error("Device still has guides");
+}
+
 // Postgres unique violation: the same name already exists.
 export function isDuplicate(error: unknown): boolean {
   return typeof error === "object" && error !== null && (error as { code?: string }).code === "23505";

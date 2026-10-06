@@ -773,3 +773,31 @@ Option A. No schema change.
 **Consequences:**
 - The archive icon from #26 is gone. The bin means "delete, or archive when guides exist"; the dialog says which.
 - Typecheck passes. Not run in a browser or against a live Supabase project.
+
+### #28
+**Date:** 2026-10-06
+**Milestone:** Permanent delete for archived devices, including their guides (amends #14, #26, #27)
+
+**Context:**
+#27 archives a device that has guides and never deletes it. The human asked that a device already in the archive can be deleted permanently, with a warning that asks them to be sure.
+
+**Options Considered:**
+- A: An archived device can be deleted for good. With no guides, one confirmation. With guides, they are deleted too and the admin must type the device name.
+- B: Only archived devices with no guides can be deleted; ones with guides stay archived.
+
+**Community Consensus:**
+Not searched. Chosen by the human's request.
+
+**Decision:**
+Option A. No schema change. This is the first time the app deletes guides, so it amends #14 ("guides are never deleted") for this one path.
+- An archived device shows a restore icon and a bin ("Delete permanently").
+- No guides: "Delete X permanently? ... This can't be undone." and OK / Cancel.
+- With guides: a prompt says how many guides go, and that their simulations and every customer's progress go with them. Nothing is deleted unless the exact device name is typed.
+- The app deletes the device's guides first, then the device. Deleting a guide cascades to its steps, simulations, attempts, results, progress and saved marks.
+- Active devices are unchanged (#27): the bin archives when guides exist.
+
+**Consequences:**
+- Customers lose their progress and attempts on those guides. It cannot be undone.
+- Photos uploaded for the deleted guides stay in the guide-images storage bucket; the app does not remove them.
+- If deleting the guides works but deleting the device fails, the guides stay deleted and the device stays archived; the screen shows an error and the admin can try again.
+- Typecheck passes. Not run in a browser or against a live Supabase project.
