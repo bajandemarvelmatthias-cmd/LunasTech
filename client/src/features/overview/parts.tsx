@@ -8,12 +8,12 @@ export function StatCard({
   value,
 }: Readonly<{ icon: Icon; label: string; value: string | number }>) {
   return (
-    <div className="flex flex-col gap-4 rounded-md border border-border bg-surface p-6 shadow-card">
-      <span className="flex size-10 items-center justify-center rounded-md bg-accent-soft text-accent">
+    <div className="flex items-center gap-4 rounded-md border border-border bg-surface p-6 shadow-card">
+      <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent">
         <Icon className="size-6" aria-hidden="true" />
       </span>
-      <span className="flex flex-col">
-        <span className="text-sm text-text-muted">{label}</span>
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate text-sm text-text-muted">{label}</span>
         <span className="text-lg font-semibold">{value}</span>
       </span>
     </div>

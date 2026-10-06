@@ -532,3 +532,26 @@ Option B. Applied: story panel with eyebrow, headline, feature cards and note; f
 - Adding Google sign-in later needs the provider enabled in Supabase plus one button; adding Full name needs a migration that reads display_name from signup metadata.
 - Auth text sizes follow the project tokens, not the design file's 8 to 12px sizes.
 - Typecheck passes. Not run in a browser or against a live Supabase project.
+
+### #19
+**Date:** 2026-10-06
+**Milestone:** Customer dashboard from the third design file (amends #17)
+
+**Context:**
+The human supplied a design export for the customer dashboard and asked whether it fits the tech stack. The export is plain CSS with local state, localStorage and stock photos. This project is React, Tailwind tokens and Supabase. The human asked for the AI's recommendation.
+
+**Options Considered:**
+- A: Port the export as is (its CSS, mock data, localStorage, photos).
+- B: Rebuild the layout and look in this project's stack and use real data wherever a table already exists.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation.
+
+**Decision:**
+Option B. The Overview page now has: greeting by time of day, hero, four stat cards (published guides, simulations passed, guides completed, learning level), device cards with real guide counts that open that device's symptoms, three latest published guides that open the guide itself, and a diagnosis banner. The "diagnosis" is the existing device, symptom, guides flow; no second diagnosis feature was built (constraints.md #3). Customer tabs are renamed Repair Guides and My Progress. The sidebar bottom shows a start prompt (customers only) and the signed-in account. GuidesFlow takes an optional start route; opening from the dashboard remounts the flow so it starts there, and Back returns to the device list. One query, fetchPublishedGuides(), feeds the counts and cards; no schema change.
+
+**Consequences:**
+- Not built, because nothing backs them yet: Saved Guides (needs a table), a separate Simulations page (simulations are reached by finishing a guide), search, notifications, help dialog, guide photos (no image column), the community avatars line, "Try a simulation" button on the hero.
+- The design's Beginner/Explorer labels are not used; the page shows the numeric level the database calculates.
+- Opening guides from the dashboard resets the Guides flow, so a half-finished browse is lost.
+- Typecheck passes. Not run in a browser or against a live Supabase project; ESLint not run.

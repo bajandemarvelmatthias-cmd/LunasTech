@@ -51,17 +51,20 @@ function TabButton({
 // `nav` (signed in only): bottom tab bar on phones, left sidebar from md up
 // (decision-log.md #17). Both render from the same tab list.
 // `wide` gives dashboard pages room; other screens keep the narrow column.
+// `sidebarFooter` sits at the bottom of the sidebar (md and up).
 export function Shell({
   account,
   nav,
   workspace,
   wide,
+  sidebarFooter,
   children,
 }: Readonly<{
   account?: ReactNode;
   nav?: Nav;
   workspace?: string;
   wide?: boolean;
+  sidebarFooter?: ReactNode;
   children: ReactNode;
 }>) {
   const activeLabel = nav?.tabs.find((t) => t.id === nav.active)?.label;
@@ -78,6 +81,7 @@ export function Shell({
               <TabButton key={tab.id} tab={tab} nav={nav} variant="side" />
             ))}
           </nav>
+          {sidebarFooter && <div className="mt-auto">{sidebarFooter}</div>}
         </aside>
       )}
       <div className="flex min-h-dvh min-w-0 flex-col">

@@ -5,9 +5,10 @@ import { AuthFlow } from "@/features/auth/AuthFlow";
 import { ResetPasswordScreen } from "@/features/auth/ResetPasswordScreen";
 import { AdminFlow } from "@/features/admin/AdminFlow";
 import { fetchIsAdmin } from "@/features/admin/api";
-import { GuidesFlow } from "@/features/guides/GuidesFlow";
+import { GuidesFlow, type GuidesStart } from "@/features/guides/GuidesFlow";
 import { AdminOverview } from "@/features/overview/AdminOverview";
 import { CustomerOverview } from "@/features/overview/CustomerOverview";
+import { SidebarFooter } from "@/features/overview/SidebarFooter";
 import { ProgressScreen } from "@/features/progress/ProgressScreen";
 import { TextButton } from "@/components/ui/Button";
 import { Shell, type NavTab } from "@/layout/Shell";
@@ -17,8 +18,8 @@ import { useLoad } from "@/lib/useLoad";
 const OVERVIEW: NavTab = { id: "overview", label: "Overview", icon: SquaresFour };
 const CUSTOMER_TABS: NavTab[] = [
   OVERVIEW,
-  { id: "guides", label: "Guides", icon: BookOpen },
-  { id: "progress", label: "Progress", icon: ChartLineUp },
+  { id: "guides", label: "Repair Guides", icon: BookOpen },
+  { id: "progress", label: "My Progress", icon: ChartLineUp },
 ];
 const ADMIN_TABS: NavTab[] = [OVERVIEW, { id: "guides", label: "Guides", icon: BookOpen }];
 
@@ -31,8 +32,15 @@ function SignedIn() {
   // The database enforces what an admin may do.
   const [workspace, setWorkspace] = useState<Workspace>("admin");
   const [tab, setTab] = useState("overview");
+  // Opening guides from the dashboard remounts the flow so it can start at a device or a guide.
+  const [guidesTarget, setGuidesTarget] = useState<{ id: number; start?: GuidesStart }>({ id: 0 });
   const { data: isAdmin } = useLoad(() => fetchIsAdmin(userId), [userId]);
   const current: Workspace = isAdmin && workspace === "admin" ? "admin" : "customer";
+
+  function openGuides(start?: GuidesStart) {
+    setGuidesTarget((t) => ({ id: t.id + 1, start }));
+    setTab("guides");
+  }
 
   function switchTo(next: Workspace) {
     setWorkspace(next);
@@ -42,6 +50,9 @@ function SignedIn() {
   return (
     <Shell
       wide={tab === "overview"}
+      sidebarFooter={
+        <SidebarFooter email={session?.user.email ?? ""} admin={current === "admin"} onStart={() => openGuides()} />
+      }
       workspace={current === "admin" ? "Admin workspace" : "Your workspace"}
       account={
         <div className="flex items-center gap-4">
@@ -59,12 +70,12 @@ function SignedIn() {
         (current === "admin" ? (
           <AdminOverview onOpenGuides={() => setTab("guides")} />
         ) : (
-          <CustomerOverview onOpenGuides={() => setTab("guides")} />
+          <CustomerOverview onOpen={openGuides} />
         ))}
       {/* Customer Guides stays mounted so the person keeps their place; Progress reloads each visit. */}
       {current === "customer" && (
         <div hidden={tab !== "guides"}>
-          <GuidesFlow />
+          <GuidesFlow key={guidesTarget.id} start={guidesTarget.start} />
         </div>
       )}
       {current === "customer" && tab === "progress" && <ProgressScreen />}

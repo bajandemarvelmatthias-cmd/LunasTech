@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useHistoryStack } from "@/lib/useHistoryStack";
 import { useLoad } from "@/lib/useLoad";
 import { fetchDevices, fetchGuides, fetchSymptoms } from "./api";
@@ -17,12 +17,24 @@ type Route =
   | { name: "simulations"; guide: Guide }
   | { name: "simulation"; simulation: Simulation };
 
+// Where the flow opens when the dashboard sends the person straight to a
+// device's symptoms or to one guide. Back returns to the device list.
+export type GuidesStart = Extract<Route, { name: "symptoms" | "guide" }>;
+
 // Linear flow: device, symptom, matching guides, the guide itself, then its
 // simulation (opened automatically when the guide has exactly one).
 // State-based like AuthFlow. The browser back button goes back one screen
 // (lib/useHistoryStack.ts); the URL does not change.
-export function GuidesFlow() {
+export function GuidesFlow({ start }: Readonly<{ start?: GuidesStart }>) {
   const { current: route, push, pop, replace, reset: home } = useHistoryStack<Route>({ name: "devices" });
+  const seeded = useRef(false);
+
+  useEffect(() => {
+    if (start && !seeded.current) {
+      seeded.current = true;
+      push(start);
+    }
+  }, [start, push]);
 
   switch (route.name) {
     case "devices":
