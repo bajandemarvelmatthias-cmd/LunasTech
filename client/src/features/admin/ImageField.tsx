@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Plus } from "@phosphor-icons/react";
 import { TextButton } from "@/components/ui/Button";
 import { GuideImage } from "@/components/ui/GuideImage";
-import { IMAGE_TYPES, uploadGuideImage } from "@/lib/guideImages";
+import { IMAGE_ACCEPT, UnreadableImageError, uploadGuideImage } from "@/lib/guideImages";
 
 type Props = {
   label: string;
@@ -22,17 +22,17 @@ export function ImageField({ label, path, folder, onChange }: Readonly<Props>) {
 
   async function pick(file: File | undefined) {
     if (!file) return;
-    if (!IMAGE_TYPES.includes(file.type)) {
-      setError("Only images can be uploaded. Use a JPG, PNG or WebP photo.");
-      if (input.current) input.current.value = "";
-      return;
-    }
     setBusy(true);
     setError(null);
     try {
       onChange(await uploadGuideImage(file, folder));
-    } catch {
-      setError("Could not upload the photo. Use a JPG, PNG or WebP photo and try again.");
+    } catch (err) {
+      setError(
+        err instanceof UnreadableImageError
+          ? "That file is not a picture this browser can open. Choose a JPG, PNG or WebP photo."
+          : "The photo could not be uploaded. Check your connection and try again.",
+      );
+      console.error("Photo upload failed:", err);
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
@@ -67,7 +67,7 @@ export function ImageField({ label, path, folder, onChange }: Readonly<Props>) {
       <input
         ref={input}
         type="file"
-        accept={IMAGE_TYPES.join(",")}
+        accept={IMAGE_ACCEPT}
         className="hidden"
         aria-label={label}
         onChange={(e) => void pick(e.target.files?.[0])}
