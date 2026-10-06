@@ -612,3 +612,30 @@ Option B. App.tsx now has two components, AdminWorkspace and CustomerWorkspace, 
 - Roles are still changed only in the Supabase dashboard or with the service key.
 - SidebarFooter's onStart is now optional (the admin footer has no start prompt).
 - Typecheck passes. Not run in a browser or against a live Supabase project.
+
+### #22
+**Date:** 2026-10-06
+**Milestone:** Guide photos and card details (amends #20)
+
+**Context:**
+Decision #20 left out guide difficulty, estimated time and cover image because no table backed them. The human supplied a screenshot of a photo-card guide catalog and asked for the repair guides to be designed like it, with admins able to add pictures so customers enjoy browsing.
+
+**Options Considered:**
+- A: Store photos as links the admin pastes.
+- B: Upload photos to a Supabase Storage bucket from the guide editor.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation.
+
+**Decision:**
+Option B, with a schema change the human asked for (migration 20261006000000_guide_images.sql, to be run in the Supabase SQL editor).
+- guides: optional difficulty (easy, moderate, hard), estimated_minutes and cover_image_path. guide_steps: optional image_path.
+- Storage bucket guide-images: public by URL (random file names), JPG/PNG/WebP, 5 MB limit, only admins can upload (policy uses is_admin()).
+- Admin guide editor: Cover photo, Difficulty, Estimated time, and a photo on each step. A picked photo is shrunk to 1600 px and uploaded at once; Save stores its path. Admin guide list shows a thumbnail.
+- Customer guide list shows photo cards (cover, kind, title, difficulty, time, step count). The guide screen shows the cover on top and each step's photo. Guides without photos show a neutral tile in lists and nothing on the guide screen. The device, symptom, guide flow is unchanged.
+
+**Consequences:**
+- Run the migration before using the new app code; the app reads the new columns.
+- Replacing or removing a photo leaves the old file in storage (admins cannot delete files; no delete policy). Files are small after shrinking.
+- Anyone with a photo's URL can view it, including photos of drafts. Photos are not secret.
+- No new dependency, no token change. Typecheck passes (with the tsconfig baseUrl deprecation silenced; that warning exists without this change). Not run in a browser or against a live Supabase project.

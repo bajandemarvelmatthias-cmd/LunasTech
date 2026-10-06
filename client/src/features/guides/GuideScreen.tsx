@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { BackButton } from "@/components/ui/BackButton";
 import { Button, TextButton } from "@/components/ui/Button";
+import { GuideImage } from "@/components/ui/GuideImage";
 import { useLoad } from "@/lib/useLoad";
 import { fetchGuideSteps, fetchProgress, saveProgress } from "./api";
+import { GuideMeta } from "./GuideParts";
 import type { Guide, GuideProgress, GuideStep } from "./types";
 
 type Props = { guide: Guide; onBack: () => void; onFinished: () => void };
@@ -29,7 +31,11 @@ export function GuideScreen({ guide, onBack, onFinished }: Readonly<Props>) {
   return (
     <div className="flex flex-col gap-6 pb-12">
       <BackButton onClick={onBack} />
-      <h1 className="text-lg font-semibold">{guide.title}</h1>
+      <GuideImage path={guide.cover_image_path} className="aspect-video w-full rounded-lg" />
+      <div className="flex flex-col gap-2">
+        <h1 className="text-lg font-semibold">{guide.title}</h1>
+        <GuideMeta guide={guide} />
+      </div>
       {loading && <p className="text-base text-text-muted">Loading</p>}
       {!loading && (error || !data) && (
         <div className="flex flex-col gap-4">
@@ -112,6 +118,7 @@ function Stepper({ guideId, steps, progress, onDone }: Readonly<StepperProps>) {
         />
       </div>
       <h2 className="text-base font-semibold">{step.title}</h2>
+      <GuideImage path={step.image_path} className="aspect-video w-full rounded-lg" />
       <p className="whitespace-pre-line text-base">{step.instruction}</p>
       {saveFailed && (
         <p role="alert" className="text-sm text-danger">

@@ -3,6 +3,7 @@ import { useHistoryStack } from "@/lib/useHistoryStack";
 import { useLoad } from "@/lib/useLoad";
 import { fetchDevices, fetchGuides, fetchSymptoms } from "./api";
 import { GuideScreen } from "./GuideScreen";
+import { GuideCards } from "./GuideParts";
 import { ListScreen } from "./ListScreen";
 import { SimulationList } from "@/features/simulations/SimulationList";
 import { SimulationScreen } from "@/features/simulations/SimulationScreen";
@@ -151,6 +152,7 @@ function GuideList({ symptom, onBack, onSelect, onOnlyGuide }: Readonly<GuideLis
         data?.map((g) => ({ id: g.id, label: g.title, note: KIND_LABEL[g.kind] })) ?? null
       }
       empty="No guides yet."
+      cards={data ? <GuideCards guides={data} onSelect={onSelect} /> : undefined}
       onSelect={(id) => {
         const guide = data?.find((g) => g.id === id);
         if (guide) onSelect(guide);

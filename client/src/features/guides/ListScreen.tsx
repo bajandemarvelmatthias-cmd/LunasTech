@@ -14,6 +14,8 @@ type Props = {
   onSelect: (id: string) => void;
   // Optional control shown under the list (admin: "New guide").
   action?: ReactNode;
+  // Optional replacement for the plain list when there are items (guide cards).
+  cards?: ReactNode;
 };
 
 // One list step of the guide flow: loading, error, empty or the list.
@@ -27,6 +29,7 @@ export function ListScreen({
   empty,
   onSelect,
   action,
+  cards,
 }: Readonly<Props>) {
   let body;
   if (loading) {
@@ -43,7 +46,7 @@ export function ListScreen({
   } else if (items.length === 0) {
     body = <p className="text-base text-text-muted">{empty}</p>;
   } else {
-    body = <ChoiceList items={items} onSelect={onSelect} />;
+    body = cards ?? <ChoiceList items={items} onSelect={onSelect} />;
   }
 
   return (

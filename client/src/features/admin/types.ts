@@ -1,4 +1,4 @@
-import type { GuideKind, GuideStep } from "@/features/guides/types";
+import type { GuideDifficulty, GuideKind, GuideStep } from "@/features/guides/types";
 
 export type Status = "draft" | "published";
 
@@ -10,6 +10,7 @@ export type AdminGuideRow = {
   device: string;
   symptom: string;
   createdAt: string;
+  coverImagePath: string | null;
 };
 
 // Status filter on the guides list. The overview opens it on "draft".
@@ -23,11 +24,19 @@ export type GuideDetail = {
   kind: GuideKind;
   status: Status;
   symptomId: string;
+  difficulty: GuideDifficulty | null;
+  estimatedMinutes: number | null;
+  coverImagePath: string | null;
   steps: GuideStep[];
 };
 
 // A step being edited. `id` is null until it has been saved.
-export type StepDraft = { id: string | null; title: string; instruction: string };
+export type StepDraft = {
+  id: string | null;
+  title: string;
+  instruction: string;
+  imagePath: string | null;
+};
 
 export const STATUS_LABEL: Record<Status, string> = { draft: "Draft", published: "Published" };
 

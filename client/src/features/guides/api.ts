@@ -23,19 +23,23 @@ export async function fetchSymptoms(deviceId: string): Promise<Symptom[]> {
 export async function fetchGuides(symptomId: string): Promise<Guide[]> {
   const { data, error } = await supabase
     .from("guides")
-    .select("id, title, kind")
+    .select("id, title, kind, difficulty, estimated_minutes, cover_image_path, guide_steps(count)")
     .eq("symptom_id", symptomId)
     .eq("status", "published")
     .order("kind")
     .order("title");
   if (error) throw error;
-  return data as Guide[];
+  type Row = Omit<Guide, "step_count"> & { guide_steps: { count: number }[] };
+  return (data as unknown as Row[]).map(({ guide_steps, ...g }) => ({
+    ...g,
+    step_count: guide_steps[0]?.count ?? 0,
+  }));
 }
 
 export async function fetchGuideSteps(guideId: string): Promise<GuideStep[]> {
   const { data, error } = await supabase
     .from("guide_steps")
-    .select("id, position, title, instruction")
+    .select("id, position, title, instruction, image_path")
     .eq("guide_id", guideId)
     .order("position");
   if (error) throw error;

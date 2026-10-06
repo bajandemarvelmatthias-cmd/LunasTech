@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { PencilSimple } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
+import { GuideImage } from "@/components/ui/GuideImage";
 import { KIND_LABEL } from "@/features/guides/types";
 import { LoadError, PageHeader } from "@/features/overview/parts";
 import { cn, formatDate } from "@/lib/utils";
@@ -65,10 +66,13 @@ export function GuideAdminList({
                   onClick={() => onOpen(g.id)}
                   className={cn("grid w-full items-center gap-4 px-6 py-4 text-left hover:bg-surface-secondary", GRID, focus)}
                 >
-                  <span className="flex min-w-0 flex-col">
-                    <span className={TITLE}>{g.title}</span>
-                    <span className={SUBTITLE}>
-                      {g.device} · {g.symptom}
+                  <span className="flex min-w-0 items-center gap-4">
+                    <GuideImage path={g.coverImagePath} placeholder className="size-12 shrink-0 rounded-md" />
+                    <span className="flex min-w-0 flex-col">
+                      <span className={TITLE}>{g.title}</span>
+                      <span className={SUBTITLE}>
+                        {g.device} · {g.symptom}
+                      </span>
                     </span>
                   </span>
                   <span className={SECONDARY}>{KIND_LABEL[g.kind]}</span>

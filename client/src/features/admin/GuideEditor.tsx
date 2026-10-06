@@ -5,8 +5,15 @@ import { TextArea } from "@/components/ui/TextArea";
 import { TextField } from "@/components/ui/TextField";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { fetchDevices } from "@/features/guides/api";
-import { KIND_LABEL, type GuideKind, type GuideStep } from "@/features/guides/types";
+import {
+  DIFFICULTY_LABEL,
+  KIND_LABEL,
+  type GuideDifficulty,
+  type GuideKind,
+  type GuideStep,
+} from "@/features/guides/types";
 import { useLoad } from "@/lib/useLoad";
+import { ImageField } from "./ImageField";
 import {
   AddStepButton,
   confirmDiscard,
@@ -30,6 +37,9 @@ const BLANK: GuideDetail = {
   kind: "small_fix",
   status: "draft",
   symptomId: "",
+  difficulty: null,
+  estimatedMinutes: null,
+  coverImagePath: null,
   steps: [],
 };
 
@@ -37,6 +47,11 @@ const KIND_OPTIONS = (Object.keys(KIND_LABEL) as GuideKind[]).map((k) => ({
   value: k,
   label: KIND_LABEL[k],
 }));
+
+const DIFFICULTY_OPTIONS = [
+  { value: "", label: "Not set" },
+  ...(Object.keys(DIFFICULTY_LABEL) as GuideDifficulty[]).map((d) => ({ value: d, label: DIFFICULTY_LABEL[d] })),
+];
 
 type Props = {
   guideId: string | null;
@@ -76,7 +91,7 @@ export function GuideEditor({ guideId, onBack, onSimulations }: Readonly<Props>)
 }
 
 const toDrafts = (steps: GuideStep[]): StepDraft[] =>
-  steps.map((s) => ({ id: s.id, title: s.title, instruction: s.instruction }));
+  steps.map((s) => ({ id: s.id, title: s.title, instruction: s.instruction, imagePath: s.image_path }));
 
 function EditorForm({
   detail,
@@ -98,6 +113,9 @@ function EditorForm({
   const [title, setTitle] = useState(detail.title);
   const [symptomId, setSymptomId] = useState(detail.symptomId);
   const [kind, setKind] = useState<GuideKind>(detail.kind);
+  const [difficulty, setDifficulty] = useState<GuideDifficulty | "">(detail.difficulty ?? "");
+  const [minutes, setMinutes] = useState(detail.estimatedMinutes ? String(detail.estimatedMinutes) : "");
+  const [coverPath, setCoverPath] = useState<string | null>(detail.coverImagePath);
   const [drafts, setDrafts] = useState<StepDraft[]>(toDrafts(detail.steps));
   const [symptoms, setSymptoms] = useState(initialSymptoms);
 
@@ -110,6 +128,9 @@ function EditorForm({
   function problem(): string | null {
     if (!title.trim()) return "Enter a title.";
     if (!symptomId) return "Choose a symptom.";
+    if (minutes.trim() && !/^[1-9]\d{0,3}$/.test(minutes.trim())) {
+      return "Enter the time as a whole number of minutes.";
+    }
     if (drafts.some((d) => !d.title.trim() || !d.instruction.trim())) {
       return "Every step needs a title and an instruction.";
     }
@@ -123,6 +144,9 @@ function EditorForm({
       title: title.trim(),
       symptomId,
       kind,
+      difficulty: difficulty || null,
+      estimatedMinutes: minutes.trim() ? Number(minutes.trim()) : null,
+      coverImagePath: coverPath,
       drafts: drafts.map((d) => ({ ...d, title: d.title.trim(), instruction: d.instruction.trim() })),
       original,
     });
@@ -169,6 +193,24 @@ function EditorForm({
         options={KIND_OPTIONS}
         onChange={(e) => edit(() => setKind(e.target.value as GuideKind))}
       />
+      <Select
+        label="Difficulty"
+        value={difficulty}
+        options={DIFFICULTY_OPTIONS}
+        onChange={(e) => edit(() => setDifficulty(e.target.value as GuideDifficulty | ""))}
+      />
+      <TextField
+        label="Estimated time (minutes)"
+        inputMode="numeric"
+        value={minutes}
+        onChange={(e) => edit(() => setMinutes(e.target.value))}
+      />
+      <ImageField
+        label="Cover photo"
+        folder="covers"
+        path={coverPath}
+        onChange={(path) => edit(() => setCoverPath(path))}
+      />
 
       {drafts.map((d, i) => (
         <fieldset key={d.id ?? `new-${i}`} className="flex flex-col gap-4">
@@ -179,13 +221,19 @@ function EditorForm({
             value={d.instruction}
             onChange={(e) => updateDraft(i, { instruction: e.target.value })}
           />
+          <ImageField
+            label="Step photo"
+            folder="steps"
+            path={d.imagePath}
+            onChange={(path) => updateDraft(i, { imagePath: path })}
+          />
           {i === drafts.length - 1 && (
             <RemoveStepButton number={i + 1} onRemove={() => edit(() => setDrafts((list) => list.slice(0, -1)))} />
           )}
         </fieldset>
       ))}
       <AddStepButton
-        onAdd={() => edit(() => setDrafts((list) => [...list, { id: null, title: "", instruction: "" }]))}
+        onAdd={() => edit(() => setDrafts((list) => [...list, { id: null, title: "", instruction: "", imagePath: null }]))}
       />
 
       <SaveBar message={message} busy={busy} status={status} onSave={save} onToggleStatus={toggleStatus} />

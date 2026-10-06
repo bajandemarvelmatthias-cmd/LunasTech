@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { fetchGuideSteps } from "@/features/guides/api";
-import type { GuideKind, GuideStep } from "@/features/guides/types";
+import type { GuideDifficulty, GuideKind, GuideStep } from "@/features/guides/types";
 import type {
   AdminCounts,
   AdminGuideRow,
@@ -31,6 +31,7 @@ type GuideQuery = {
   kind: GuideKind;
   status: Status;
   created_at: string;
+  cover_image_path: string | null;
   symptoms: { name: string; device_types: { name: string } | null } | null;
 };
 
@@ -38,7 +39,7 @@ type GuideQuery = {
 export async function fetchAdminGuides(): Promise<AdminGuideRow[]> {
   const { data, error } = await supabase
     .from("guides")
-    .select("id, title, kind, status, created_at, symptoms(name, device_types(name))")
+    .select("id, title, kind, status, created_at, cover_image_path, symptoms(name, device_types(name))")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data as unknown as GuideQuery[]).map((g) => ({
@@ -49,6 +50,7 @@ export async function fetchAdminGuides(): Promise<AdminGuideRow[]> {
     device: g.symptoms?.device_types?.name ?? "",
     symptom: g.symptoms?.name ?? "",
     createdAt: g.created_at,
+    coverImagePath: g.cover_image_path,
   }));
 }
 
@@ -74,7 +76,11 @@ export async function createSymptom(deviceId: string, name: string): Promise<str
 
 export async function fetchGuideDetail(guideId: string): Promise<GuideDetail> {
   const [guide, steps] = await Promise.all([
-    supabase.from("guides").select("id, title, kind, status, symptom_id").eq("id", guideId).single(),
+    supabase
+      .from("guides")
+      .select("id, title, kind, status, symptom_id, difficulty, estimated_minutes, cover_image_path")
+      .eq("id", guideId)
+      .single(),
     fetchGuideSteps(guideId),
   ]);
   if (guide.error) throw guide.error;
@@ -84,6 +90,9 @@ export async function fetchGuideDetail(guideId: string): Promise<GuideDetail> {
     kind: guide.data.kind,
     status: guide.data.status,
     symptomId: guide.data.symptom_id,
+    difficulty: guide.data.difficulty as GuideDifficulty | null,
+    estimatedMinutes: guide.data.estimated_minutes,
+    coverImagePath: guide.data.cover_image_path,
     steps,
   };
 }
@@ -146,6 +155,9 @@ type SaveInput = {
   title: string;
   symptomId: string;
   kind: GuideKind;
+  difficulty: GuideDifficulty | null;
+  estimatedMinutes: number | null;
+  coverImagePath: string | null;
   drafts: StepDraft[];
   original: GuideStep[];
 };
@@ -157,19 +169,27 @@ type SaveInput = {
 // Order of writes: delete, update, insert. A failure part way leaves earlier
 // writes in place; saving again repeats only what still differs.
 export async function saveGuide(input: SaveInput): Promise<{ id: string; steps: GuideStep[] }> {
-  const { userId, title, symptomId, kind, drafts, original } = input;
+  const { userId, title, symptomId, kind, difficulty, estimatedMinutes, coverImagePath, drafts, original } = input;
+  const fields = {
+    title,
+    symptom_id: symptomId,
+    kind,
+    difficulty,
+    estimated_minutes: estimatedMinutes,
+    cover_image_path: coverImagePath,
+  };
   let id = input.guideId;
 
   if (id) {
     const { error } = await supabase
       .from("guides")
-      .update({ title, symptom_id: symptomId, kind })
+      .update(fields)
       .eq("id", id);
     if (error) throw error;
   } else {
     const { data, error } = await supabase
       .from("guides")
-      .insert({ title, symptom_id: symptomId, kind, created_by: userId })
+      .insert({ ...fields, created_by: userId })
       .select("id")
       .single();
     if (error) throw error;
@@ -180,9 +200,16 @@ export async function saveGuide(input: SaveInput): Promise<{ id: string; steps: 
     table: "guide_steps",
     original,
     drafts,
-    changed: (before, d) => before.title !== d.title || before.instruction !== d.instruction,
-    toUpdate: (d) => ({ title: d.title, instruction: d.instruction }),
-    toInsert: (d, position) => ({ guide_id: id, position, title: d.title, instruction: d.instruction }),
+    changed: (before, d) =>
+      before.title !== d.title || before.instruction !== d.instruction || before.image_path !== d.imagePath,
+    toUpdate: (d) => ({ title: d.title, instruction: d.instruction, image_path: d.imagePath }),
+    toInsert: (d, position) => ({
+      guide_id: id,
+      position,
+      title: d.title,
+      instruction: d.instruction,
+      image_path: d.imagePath,
+    }),
   });
 
   return { id, steps: await fetchGuideSteps(id) };
