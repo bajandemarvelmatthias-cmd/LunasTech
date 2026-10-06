@@ -5,6 +5,7 @@ import type {
   AdminCounts,
   AdminGuideRow,
   CustomerRow,
+  DeviceFields,
   DeviceSummary,
   GuideDetail,
   SimStepDraft,
@@ -32,6 +33,7 @@ type GuideQuery = {
   status: Status;
   created_at: string;
   cover_image_path: string | null;
+  difficulty: GuideDifficulty | null;
   symptoms: { name: string; device_types: { name: string } | null } | null;
 };
 
@@ -39,7 +41,7 @@ type GuideQuery = {
 export async function fetchAdminGuides(): Promise<AdminGuideRow[]> {
   const { data, error } = await supabase
     .from("guides")
-    .select("id, title, kind, status, created_at, cover_image_path, symptoms(name, device_types(name))")
+    .select("id, title, kind, status, created_at, cover_image_path, difficulty, symptoms(name, device_types(name))")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data as unknown as GuideQuery[]).map((g) => ({
@@ -51,6 +53,7 @@ export async function fetchAdminGuides(): Promise<AdminGuideRow[]> {
     symptom: g.symptoms?.name ?? "",
     createdAt: g.created_at,
     coverImagePath: g.cover_image_path,
+    difficulty: g.difficulty,
   }));
 }
 
@@ -78,7 +81,7 @@ export async function fetchGuideDetail(guideId: string): Promise<GuideDetail> {
   const [guide, steps] = await Promise.all([
     supabase
       .from("guides")
-      .select("id, title, kind, status, symptom_id, difficulty, estimated_minutes, cover_image_path")
+      .select("id, title, description, kind, status, symptom_id, difficulty, estimated_minutes, cover_image_path")
       .eq("id", guideId)
       .single(),
     fetchGuideSteps(guideId),
@@ -87,6 +90,7 @@ export async function fetchGuideDetail(guideId: string): Promise<GuideDetail> {
   return {
     id: guide.data.id,
     title: guide.data.title,
+    description: guide.data.description ?? "",
     kind: guide.data.kind,
     status: guide.data.status,
     symptomId: guide.data.symptom_id,
@@ -153,6 +157,7 @@ type SaveInput = {
   guideId: string | null;
   userId: string;
   title: string;
+  description: string;
   symptomId: string;
   kind: GuideKind;
   difficulty: GuideDifficulty | null;
@@ -169,9 +174,10 @@ type SaveInput = {
 // Order of writes: delete, update, insert. A failure part way leaves earlier
 // writes in place; saving again repeats only what still differs.
 export async function saveGuide(input: SaveInput): Promise<{ id: string; steps: GuideStep[] }> {
-  const { userId, title, symptomId, kind, difficulty, estimatedMinutes, coverImagePath, drafts, original } = input;
+  const { userId, title, description, symptomId, kind, difficulty, estimatedMinutes, coverImagePath, drafts, original } = input;
   const fields = {
     title,
+    description: description || null,
     symptom_id: symptomId,
     kind,
     difficulty,
@@ -383,13 +389,17 @@ export async function fetchAllSimulations(): Promise<SimulationListRow[]> {
 type DeviceQuery = {
   id: string;
   name: string;
+  manufacturer: string | null;
+  category: DeviceFields["category"];
+  notes: string | null;
+  status: DeviceFields["status"];
   symptoms: { id: string; name: string; guides: { id: string; status: Status }[] }[];
 };
 
 export async function fetchDeviceSummaries(): Promise<DeviceSummary[]> {
   const { data, error } = await supabase
     .from("device_types")
-    .select("id, name, symptoms(id, name, guides(id, status))")
+    .select("id, name, manufacturer, category, notes, status, symptoms(id, name, guides(id, status))")
     .order("name");
   if (error) throw error;
   return (data as unknown as DeviceQuery[]).map((d) => {
@@ -397,6 +407,10 @@ export async function fetchDeviceSummaries(): Promise<DeviceSummary[]> {
     return {
       id: d.id,
       name: d.name,
+      manufacturer: d.manufacturer ?? "",
+      category: d.category,
+      notes: d.notes ?? "",
+      status: d.status,
       guides: all.length,
       published: all.filter((g) => g.status === "published").length,
       symptoms: d.symptoms
@@ -406,8 +420,25 @@ export async function fetchDeviceSummaries(): Promise<DeviceSummary[]> {
   });
 }
 
-export async function createDevice(name: string): Promise<void> {
-  const { error } = await supabase.from("device_types").insert({ name });
+// Empty text becomes null so the database holds no blank strings.
+function deviceRow(f: DeviceFields) {
+  return {
+    name: f.name,
+    manufacturer: f.manufacturer || null,
+    category: f.category,
+    notes: f.notes || null,
+    status: f.status,
+  };
+}
+
+export async function createDevice(fields: DeviceFields): Promise<void> {
+  const { error } = await supabase.from("device_types").insert(deviceRow(fields));
+  if (error) throw error;
+}
+
+// Guides link to a device by id, so renaming or archiving never breaks them.
+export async function updateDevice(id: string, fields: DeviceFields): Promise<void> {
+  const { error } = await supabase.from("device_types").update(deviceRow(fields)).eq("id", id);
   if (error) throw error;
 }
 

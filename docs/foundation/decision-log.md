@@ -639,3 +639,30 @@ Option B, with a schema change the human asked for (migration 20261006000000_gui
 - Replacing or removing a photo leaves the old file in storage (admins cannot delete files; no delete policy). Files are small after shrinking.
 - Anyone with a photo's URL can view it, including photos of drafts. Photos are not secret.
 - No new dependency, no token change. Typecheck passes (with the tsconfig baseUrl deprecation silenced; that warning exists without this change). Not run in a browser or against a live Supabase project.
+
+### #23
+**Date:** 2026-10-06
+**Milestone:** Guide list, guide description and device details from the admin design screenshots (amends #20, #22)
+
+**Context:**
+The human supplied admin design screenshots (Create guide, Create device, Devices, Repair guides, Simulations, Customers, Diagnosis rules) and chose the AI's recommendation, expecting database changes.
+
+**Options Considered:**
+- A: Restyle only, no database change.
+- B: Restyle plus the missing fields (guide description, device manufacturer, category, notes, status).
+- C: B plus a Diagnosis rules page.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation.
+
+**Decision:**
+Option B (migration 20261006010000_catalog_fields.sql, run in the Supabase SQL editor).
+- guides.description (optional), shown under the title on the customer guide screen.
+- device_types: manufacturer, category (smartphones, laptops, tablets, game consoles), notes, status (active or archived). Archived devices are hidden from customers; admins still see them.
+- Admin Guides list gains a Difficulty column. Admin Devices page gains All / Active / Archived tabs, search, a category icon, and an edit dialog (rename, manufacturer, category, notes, status). Devices are archived, never deleted.
+- Not built: Diagnosis rules (the symptom and guide flow is the diagnosis, constraints.md #3; reverses #20 only if the human asks for it), Add demo customer, customer email and Suspend (emails live in auth.users, no status column), guide "Planned repair steps" (steps are added as written), cover image by URL (upload from #22 replaces it), a Delete button (#14). Simulations and Customers keep their current layout, which already matches the screenshots.
+
+**Consequences:**
+- Run the migration before using the new app code; the app reads the new columns.
+- Customer device list now filters on device_types.status; the guide editor's New symptom device picker uses the same list, so archived devices are not offered there.
+- Typecheck passes. Not run in a browser or against a live Supabase project.

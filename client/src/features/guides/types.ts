@@ -13,6 +13,7 @@ export type Guide = {
   difficulty?: GuideDifficulty | null;
   estimated_minutes?: number | null;
   cover_image_path?: string | null;
+  description?: string | null;
   step_count?: number;
 };
 export type GuideStep = {

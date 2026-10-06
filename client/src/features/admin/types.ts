@@ -11,6 +11,7 @@ export type AdminGuideRow = {
   symptom: string;
   createdAt: string;
   coverImagePath: string | null;
+  difficulty: GuideDifficulty | null;
 };
 
 // Status filter on the guides list. The overview opens it on "draft".
@@ -21,6 +22,7 @@ export type SymptomOption = { id: string; label: string };
 export type GuideDetail = {
   id: string | null;
   title: string;
+  description: string;
   kind: GuideKind;
   status: Status;
   symptomId: string;
@@ -90,9 +92,27 @@ export type SimulationListRow = {
 export type SymptomSummary = { id: string; name: string; guides: number };
 
 // A device type with its symptoms and guide counts (drafts included).
-export type DeviceSummary = {
-  id: string;
+export type DeviceCategory = "smartphones" | "laptops" | "tablets" | "game_consoles";
+export type DeviceStatus = "active" | "archived";
+
+export const CATEGORY_LABEL: Record<DeviceCategory, string> = {
+  smartphones: "Smartphones",
+  laptops: "Laptops",
+  tablets: "Tablets",
+  game_consoles: "Game consoles",
+};
+
+// What an admin can set on a device (the form and the save call).
+export type DeviceFields = {
   name: string;
+  manufacturer: string;
+  category: DeviceCategory | null;
+  notes: string;
+  status: DeviceStatus;
+};
+
+export type DeviceSummary = DeviceFields & {
+  id: string;
   symptoms: SymptomSummary[];
   guides: number;
   published: number;

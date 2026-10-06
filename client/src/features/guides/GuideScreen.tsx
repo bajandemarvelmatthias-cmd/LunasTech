@@ -35,6 +35,7 @@ export function GuideScreen({ guide, onBack, onFinished }: Readonly<Props>) {
       <div className="flex flex-col gap-2">
         <h1 className="text-lg font-semibold">{guide.title}</h1>
         <GuideMeta guide={guide} />
+        {guide.description && <p className="whitespace-pre-line text-base text-text-muted">{guide.description}</p>}
       </div>
       {loading && <p className="text-base text-text-muted">Loading</p>}
       {!loading && (error || !data) && (

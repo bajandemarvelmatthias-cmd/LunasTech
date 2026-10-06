@@ -2,7 +2,7 @@ import { useState } from "react";
 import { PencilSimple } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { GuideImage } from "@/components/ui/GuideImage";
-import { KIND_LABEL } from "@/features/guides/types";
+import { DIFFICULTY_LABEL, KIND_LABEL } from "@/features/guides/types";
 import { LoadError, PageHeader } from "@/features/overview/parts";
 import { cn, formatDate } from "@/lib/utils";
 import { useLoad } from "@/lib/useLoad";
@@ -21,7 +21,7 @@ import {
 } from "./parts";
 import type { GuideFilter } from "./types";
 
-const GRID = "grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_128px_120px_120px_24px]";
+const GRID = "grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_128px_112px_120px_120px_24px]";
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 // Every guide, drafts included, with a status filter and search. A row opens
@@ -58,7 +58,7 @@ export function GuideAdminList({
         {rows.length === 0 ? (
           <EmptyNote>No guides match.</EmptyNote>
         ) : (
-          <DataList columns={["Guide", "Type", "Status", "Created", ""]} grid={GRID}>
+          <DataList columns={["Guide", "Type", "Difficulty", "Status", "Created", ""]} grid={GRID}>
             {rows.map((g) => (
               <li key={g.id}>
                 <button
@@ -76,6 +76,7 @@ export function GuideAdminList({
                     </span>
                   </span>
                   <span className={SECONDARY}>{KIND_LABEL[g.kind]}</span>
+                  <span className={SECONDARY}>{g.difficulty ? DIFFICULTY_LABEL[g.difficulty] : "Not set"}</span>
                   <StatusBadge status={g.status} />
                   <span className={SECONDARY}>{formatDate(g.createdAt)}</span>
                   <PencilSimple className="hidden size-6 text-text-muted md:block" aria-hidden="true" />

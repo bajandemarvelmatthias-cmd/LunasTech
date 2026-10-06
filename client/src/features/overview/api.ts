@@ -10,6 +10,7 @@ type Row = {
   difficulty: GuideDifficulty | null;
   estimated_minutes: number | null;
   cover_image_path: string | null;
+  description: string | null;
   symptoms: { device_types: DeviceType | null } | null;
 };
 
@@ -18,7 +19,7 @@ type Row = {
 export async function fetchPublishedGuides(): Promise<PublishedGuide[]> {
   const { data, error } = await supabase
     .from("guides")
-    .select("id, title, kind, difficulty, estimated_minutes, cover_image_path, symptoms(device_types(id, name))")
+    .select("id, title, kind, difficulty, estimated_minutes, cover_image_path, description, symptoms(device_types(id, name))")
     .eq("status", "published")
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -33,6 +34,7 @@ export async function fetchPublishedGuides(): Promise<PublishedGuide[]> {
             difficulty: g.difficulty,
             estimated_minutes: g.estimated_minutes,
             cover_image_path: g.cover_image_path,
+            description: g.description,
             device,
           },
         ]

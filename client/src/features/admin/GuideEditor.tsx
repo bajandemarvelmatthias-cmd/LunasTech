@@ -34,6 +34,7 @@ import { STATUS_LABEL, type GuideDetail, type Status, type StepDraft, type Sympt
 const BLANK: GuideDetail = {
   id: null,
   title: "",
+  description: "",
   kind: "small_fix",
   status: "draft",
   symptomId: "",
@@ -111,6 +112,7 @@ function EditorForm({
   const [status, setStatus] = useState<Status>(detail.status);
   const [original, setOriginal] = useState<GuideStep[]>(detail.steps);
   const [title, setTitle] = useState(detail.title);
+  const [description, setDescription] = useState(detail.description);
   const [symptomId, setSymptomId] = useState(detail.symptomId);
   const [kind, setKind] = useState<GuideKind>(detail.kind);
   const [difficulty, setDifficulty] = useState<GuideDifficulty | "">(detail.difficulty ?? "");
@@ -142,6 +144,7 @@ function EditorForm({
       guideId,
       userId,
       title: title.trim(),
+      description: description.trim(),
       symptomId,
       kind,
       difficulty: difficulty || null,
@@ -173,6 +176,12 @@ function EditorForm({
       <p className="text-sm text-text-muted">{STATUS_LABEL[status]}</p>
 
       <TextField label="Title" value={title} onChange={(e) => edit(() => setTitle(e.target.value))} />
+      <TextArea
+        label="Description (optional)"
+        rows={3}
+        value={description}
+        onChange={(e) => edit(() => setDescription(e.target.value))}
+      />
       <Select
         label="Symptom"
         value={symptomId}

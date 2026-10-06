@@ -5,7 +5,9 @@ import type { DeviceType, Guide, GuideProgress, GuideStep, Symptom } from "./typ
 // published here as well so admins browsing as users do not see drafts.
 
 export async function fetchDevices(): Promise<DeviceType[]> {
-  const { data, error } = await supabase.from("device_types").select("id, name").order("name");
+  const { data, error } = await supabase.from("device_types").select("id, name")
+    .eq("status", "active")
+    .order("name");
   if (error) throw error;
   return data;
 }
@@ -23,7 +25,7 @@ export async function fetchSymptoms(deviceId: string): Promise<Symptom[]> {
 export async function fetchGuides(symptomId: string): Promise<Guide[]> {
   const { data, error } = await supabase
     .from("guides")
-    .select("id, title, kind, difficulty, estimated_minutes, cover_image_path, guide_steps(count)")
+    .select("id, title, kind, difficulty, estimated_minutes, cover_image_path, description, guide_steps(count)")
     .eq("symptom_id", symptomId)
     .eq("status", "published")
     .order("kind")
