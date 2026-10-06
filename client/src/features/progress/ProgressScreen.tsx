@@ -1,32 +1,14 @@
 import type { ReactNode } from "react";
-import { Card } from "@/components/ui/Card";
-import { LoadError, Loading } from "@/components/ui/Status";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { levelName } from "@/features/profile/levels";
+import { Button } from "@/components/ui/Button";
 import { useLoad } from "@/lib/useLoad";
 import { fetchProgress } from "./api";
 
-function Figure({ value, label }: Readonly<{ value: string; label: string }>) {
+function Section({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
   return (
-    <Card className="flex flex-col gap-1">
-      <p className="text-lg font-semibold">{value}</p>
-      <p className="text-sm text-text-muted">{label}</p>
-    </Card>
-  );
-}
-
-function Section({ title, empty, children }: Readonly<{ title: string; empty: string; children: ReactNode[] }>) {
-  return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-2">
       <h2 className="text-base font-semibold">{title}</h2>
-      <Card className="py-2">
-        {children.length === 0 ? (
-          <p className="py-4 text-sm text-text-muted">{empty}</p>
-        ) : (
-          <ul className="divide-y divide-border">{children}</ul>
-        )}
-      </Card>
+      <ul className="divide-y divide-border">{children}</ul>
     </section>
   );
 }
@@ -40,38 +22,50 @@ function Row({ label, note }: Readonly<{ label: string; note: string }>) {
   );
 }
 
-// Learning level and counts first, then simulation records and guide history.
-// Points are not shown: the database owns the scoring rules (decision-log.md #11).
+// Learning level first, then guides and simulations the user has touched.
+// The tab already says "Progress", so the screen has no title of its own.
 export function ProgressScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? "";
   const { data, loading, error, retry } = useLoad(() => fetchProgress(userId), [userId]);
 
-  if (loading) return <Loading />;
+  if (loading) return <p className="text-base text-text-muted">Loading</p>;
+
   if (error || !data) {
-    return <LoadError message="Can't load your progress. Check your connection and try again." onRetry={retry} />;
+    return (
+      <div className="flex flex-col gap-4">
+        <p role="alert" className="text-sm text-danger">
+          Can't load your progress. Check your connection and try again.
+        </p>
+        <Button onClick={retry}>Try again</Button>
+      </div>
+    );
   }
 
-  const completedGuides = data.guides.filter((g) => g.completed).length;
+  const empty = data.guides.length === 0 && data.simulations.length === 0;
 
   return (
-    <>
-      <PageHeader title="My progress" subtitle="Your learning level, simulation records and guide history." />
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Figure value={levelName(data.level)} label={`Level ${data.level}`} />
-        <Figure value={String(data.simulations.length)} label="simulations completed" />
-        <Figure value={String(completedGuides)} label="guides completed" />
-      </div>
-      <Section title="Simulation records" empty="No attempts yet.">
-        {data.simulations.map((s) => (
-          <Row key={s.simulationId} label={s.title} note={s.passed ? "Passed" : "Not passed"} />
-        ))}
-      </Section>
-      <Section title="Guide history" empty="No guides started yet.">
-        {data.guides.map((g) => (
-          <Row key={g.guideId} label={g.title} note={g.completed ? "Completed" : `Step ${g.lastStep}`} />
-        ))}
-      </Section>
-    </>
+    <div className="flex flex-col gap-6 pb-12">
+      <h1 className="text-lg font-semibold">Learning level {data.level}</h1>
+      {empty && <p className="text-base text-text-muted">Nothing yet.</p>}
+      {data.guides.length > 0 && (
+        <Section title="Guides">
+          {data.guides.map((g) => (
+            <Row
+              key={g.guideId}
+              label={g.title}
+              note={g.completed ? "Completed" : `Step ${g.lastStep}`}
+            />
+          ))}
+        </Section>
+      )}
+      {data.simulations.length > 0 && (
+        <Section title="Simulations">
+          {data.simulations.map((s) => (
+            <Row key={s.simulationId} label={s.title} note={s.passed ? "Passed" : "Not passed"} />
+          ))}
+        </Section>
+      )}
+    </div>
   );
 }

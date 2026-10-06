@@ -15,16 +15,6 @@
    and placement. Let the human implement icons from their own system.
 
 ---
-## AMENDMENTS
----
-
-Decision-log.md #17 (2026-10-06) amends this file for the signed-in workspace:
-- Sidebar navigation is used (seven destinations). On phones it opens as a drawer.
-- Font sizes are tokens: xs, sm, base, lg, xl, plus display for the greeting and hero. Weights stay 400 and 600.
-- Small uppercase labels (the sidebar section label, the hero tag) are allowed.
-- Gradients, glows and single-side borders are still prohibited.
-
----
 ## CORE PHILOSOPHY
 ---
 

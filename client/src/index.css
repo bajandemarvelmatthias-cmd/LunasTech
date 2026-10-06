@@ -1,65 +1,37 @@
 @import "tailwindcss";
 
 /*
-  Design tokens. Source of truth: docs/foundation/ux-ui-guidelines.md,
-  amended by decision-log.md #17 (workspace redesign).
+  Design tokens. Source of truth: docs/foundation/ux-ui-guidelines.md.
   Flat color only. No gradients, glows or single-side borders.
-  Colors were sampled from the approved workspace screenshots.
+  Accent and typeface approved: decision-log.md #5.
 */
 @theme {
-  /* Color: canvas (page), surface (cards, bars, inputs), surface-secondary (tint), accent */
-  --color-canvas: #f8faf8;
+  /* Color: 60 surface, 30 secondary surface, 10 accent */
   --color-surface: #ffffff;
-  --color-surface-secondary: #edf3e9;
-  --color-surface-inverse: #2a5552;
-  --color-text: #253831;
-  --color-text-muted: #5f6b64;
-  --color-border: #e8ede8;
-  --color-accent: #1f7053;
-  --color-accent-hover: #185a43;
+  --color-surface-secondary: #f5f5f5;
+  --color-text: #171717;
+  --color-text-muted: #595959;
+  --color-border: #e0e0e0;
+  --color-accent: #15803d;
+  --color-accent-hover: #166534;
   --color-accent-text: #ffffff;
   --color-danger: #b91c1c;
 
-  /* Hero illustration */
-  --color-illustration: #7eb2c9;
-  --color-illustration-line: #96c0d3;
-  --color-device: #4a5158;
-  --color-device-light: #9aa0a5;
-  --color-board: #3d5148;
-
-  /* Stat tiles: one tint per concept, icon color matches */
-  --color-tile-green: #edf4ec;
-  --color-tile-blue: #eef3f8;
-  --color-tile-blue-icon: #4a77a8;
-  --color-tile-amber: #fbf4e9;
-  --color-tile-amber-icon: #b9772c;
-  --color-tile-violet: #f4eff8;
-  --color-tile-violet-icon: #7d5aa6;
-
-  /* Radius: only two values (pills use rounded-full) */
+  /* Radius: only two values */
   --radius-md: 8px;
   --radius-lg: 16px;
 
-  /* Type: 5 sizes, 2 weights. xs is for small labels, display for page greeting and hero. */
+  /* Type: 3 sizes, 2 weights */
   --font-sans: "Inter Variable", system-ui, sans-serif;
-  --text-xs: 0.75rem;
-  --text-xs--line-height: 1rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
   --text-lg: 1.5rem;
-  --text-xl: 1.75rem;
-  --text-xl--line-height: 2.25rem;
-  --text-display: 2.75rem;
-  --text-display--line-height: 1.1;
-  --text-display--letter-spacing: -0.02em;
-  --tracking-label: 0.12em;
   --font-weight-regular: 400;
   --font-weight-semibold: 600;
 
   /* Component dimensions (8px grid) */
-  --size-header: 72px;
-  --size-sidebar: 272px;
-  --size-content: 1176px;
+  --size-header: 64px;
+  --size-tab-bar: 64px;
   --size-control: 48px;
 }
 
@@ -71,7 +43,7 @@ body,
 
 body {
   margin: 0;
-  background: var(--color-canvas);
+  background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-sans);
   font-size: var(--text-base);

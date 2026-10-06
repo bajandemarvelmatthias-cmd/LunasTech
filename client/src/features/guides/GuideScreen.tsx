@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { SaveButton } from "@/features/saved/SaveButton";
 import { BackButton } from "@/components/ui/BackButton";
 import { Button, TextButton } from "@/components/ui/Button";
 import { useLoad } from "@/lib/useLoad";
@@ -30,10 +29,7 @@ export function GuideScreen({ guide, onBack, onFinished }: Readonly<Props>) {
   return (
     <div className="flex flex-col gap-6 pb-12">
       <BackButton onClick={onBack} />
-      <div className="flex items-start justify-between gap-4">
-        <h1 className="text-xl font-semibold">{guide.title}</h1>
-        <SaveButton guideId={guide.id} className="shrink-0" />
-      </div>
+      <h1 className="text-lg font-semibold">{guide.title}</h1>
       {loading && <p className="text-base text-text-muted">Loading</p>}
       {!loading && (error || !data) && (
         <div className="flex flex-col gap-4">

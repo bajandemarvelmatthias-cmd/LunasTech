@@ -36,7 +36,6 @@ export function TextField({
           aria-describedby={note ? noteId : undefined}
           className={cn(
             "h-(--size-control) w-full rounded-md border bg-surface px-4 text-base text-text",
-            "disabled:bg-surface-secondary disabled:text-text-muted",
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
             error ? "border-danger" : "border-border",
             isPassword && "pr-12",

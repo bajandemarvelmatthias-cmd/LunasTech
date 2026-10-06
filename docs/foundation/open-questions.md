@@ -38,9 +38,6 @@ Each question is tagged to the milestone where it must be resolved.
 |---|----------|-----------|-----------|
 | 3 | Which app icon for the PWA install? A PLACEHOLDER (flat green square, white L; client/public/icon-192.png, icon-512.png, icon-maskable-512.png) was added on 2026-10-06 so install can be tested. The real icon is still needed before launch: replace those three files, same names and sizes. | Before launch | [ ] |
 | 14 | Email delivery for auth: Supabase's built-in sender allows only 2 emails per hour for the whole project (checked 2026-10-05), so email confirmation and password reset will fail once more than a couple of people use them. Which SMTP provider will you use (any provider that sends through SMTP works)? Confirmation itself is decided, see resolved #15. | Before launch | [ ] |
-| 17 | Names for learning levels 0 to 4. Screenshots show "Beginner" for level 0 only. Delegated default in use (features/profile/levels.ts): Beginner, Apprentice, Practitioner, Skilled, Expert. Confirm or replace. | Before launch | [ ] |
-| 18 | Apply supabase/migrations/20261006000000_saved_guides.sql? It adds the saved_guides table and runs automatically when pushed to main. Saved Guides and the bookmark buttons need it. | Before this change is pushed | [ ] |
-| 19 | Typeface. The workspace screenshots use a different font from Inter (decision-log.md #5). Which font should the app use? Inter stays until answered. | Before launch | [ ] |
 
 ---
 ## HOW TO ADD A QUESTION (AI instructions)

@@ -25,7 +25,7 @@ export function SimulationScreen({ simulation, onBack, onExit }: Readonly<Props>
   return (
     <div className="flex flex-col gap-6 pb-12">
       <BackButton onClick={onBack} />
-      <h1 className="text-xl font-semibold">{simulation.title}</h1>
+      <h1 className="text-lg font-semibold">{simulation.title}</h1>
       {loading && <p className="text-base text-text-muted">Loading</p>}
       {!loading && (error || !data) && (
         <div className="flex flex-col gap-4">
