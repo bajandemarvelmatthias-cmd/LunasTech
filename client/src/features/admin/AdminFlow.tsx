@@ -9,7 +9,7 @@ import type { AdminStart } from "./types";
 // means from a guide's own simulation list. Back returns to where it came from.
 type Route =
   | { name: "list" }
-  | { name: "edit"; guideId: string | null }
+  | { name: "edit"; guideId: string }
   | { name: "sims"; guideId: string }
   | { name: "sim"; guideId: string; simulationId: string | null; from: "all" | "guide" };
 
@@ -27,8 +27,9 @@ export function AdminFlow({
   section,
   start,
 }: Readonly<{ section: "guides" | "simulations"; start?: AdminStart }>) {
+  // editGuide: a guide id opens that guide; null opens the "Add guide" form.
   const [route, setRoute] = useState<Route>(() =>
-    start?.editGuide === undefined ? { name: "list" } : { name: "edit", guideId: start.editGuide },
+    typeof start?.editGuide === "string" ? { name: "edit", guideId: start.editGuide } : { name: "list" },
   );
 
   switch (route.name) {
@@ -74,5 +75,11 @@ export function AdminFlow({
       />
     );
   }
-  return <GuideAdminList initialFilter={start?.filter} onOpen={(guideId) => setRoute({ name: "edit", guideId })} />;
+  return (
+    <GuideAdminList
+      initialFilter={start?.filter}
+      startNew={start?.editGuide === null}
+      onOpen={(guideId) => setRoute({ name: "edit", guideId })}
+    />
+  );
 }

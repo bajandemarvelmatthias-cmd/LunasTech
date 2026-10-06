@@ -13,7 +13,7 @@ import {
   type GuideStep,
 } from "@/features/guides/types";
 import { useLoad } from "@/lib/useLoad";
-import { confirmDiscard, EditorFrame, useEditorActions } from "./editorParts";
+import { AddStepButton, confirmDiscard, EditorFrame, RemoveStepButton, useEditorActions } from "./editorParts";
 import { ImageField } from "./ImageField";
 import {
   createSymptom,
@@ -24,7 +24,6 @@ import {
   setGuideStatus,
 } from "./api";
 import {
-  CATEGORY_LABEL,
   STATUS_LABEL,
   type DeviceOption,
   type GuideDetail,
@@ -33,23 +32,9 @@ import {
   type SymptomOption,
 } from "./types";
 
-const BLANK: GuideDetail = {
-  id: null,
-  title: "",
-  description: "",
-  kind: "small_fix",
-  status: "draft",
-  symptomId: "",
-  difficulty: null,
-  estimatedMinutes: null,
-  coverImagePath: null,
-  steps: [],
-};
-
-// A new guide starts with four empty steps to fill in.
-const NEW_GUIDE_STEPS = 4;
 const MAX_STEPS = 30;
 const blankStep = (): StepDraft => ({ id: null, title: "", instruction: "", imagePath: null });
+const hasWork = (d: StepDraft) => Boolean(d.id || d.title.trim() || d.instruction.trim() || d.imagePath);
 
 const KIND_OPTIONS = (Object.keys(KIND_LABEL) as GuideKind[]).map((k) => ({
   value: k,
@@ -64,19 +49,19 @@ const DIFFICULTY_OPTIONS = [
 const STATUS_OPTIONS = (Object.keys(STATUS_LABEL) as Status[]).map((s) => ({ value: s, label: STATUS_LABEL[s] }));
 
 type Props = {
-  guideId: string | null;
+  guideId: string;
   onBack: () => void;
   onSimulations: (guideId: string) => void;
 };
 
-// Loads the guide (or a blank one), the devices and the symptoms, then hands over to the form.
+// Loads the guide, the devices and the symptoms, then hands over to the form.
 export function GuideEditor({ guideId, onBack, onSimulations }: Readonly<Props>) {
   // The form sets this when something is edited and clears it on save.
   const dirty = useRef(false);
   const { data, loading, error, retry } = useLoad(
     async () => {
       const [detail, symptoms, devices] = await Promise.all([
-        guideId ? fetchGuideDetail(guideId) : Promise.resolve(BLANK),
+        fetchGuideDetail(guideId),
         fetchSymptomOptions(),
         fetchDeviceOptions(),
       ]);
@@ -139,39 +124,30 @@ function EditorForm({ detail, symptoms: initialSymptoms, devices, dirty, onBack,
   const [difficulty, setDifficulty] = useState<GuideDifficulty | "">(detail.difficulty ?? "");
   const [minutes, setMinutes] = useState(detail.estimatedMinutes ? String(detail.estimatedMinutes) : "");
   const [coverPath, setCoverPath] = useState<string | null>(detail.coverImagePath);
+  // A guide without steps yet opens with one empty step ready to fill in.
   const [drafts, setDrafts] = useState<StepDraft[]>(() =>
-    detail.id ? toDrafts(detail.steps) : Array.from({ length: NEW_GUIDE_STEPS }, blankStep),
+    detail.steps.length > 0 ? toDrafts(detail.steps) : [blankStep()],
   );
-  const [stepsText, setStepsText] = useState(String(drafts.length));
-
-  const device = devices.find((d) => d.id === deviceId);
-  const categoryLabel = device ? (device.category ? CATEGORY_LABEL[device.category] : "Not set") : "Choose a device first";
 
   function updateDraft(index: number, patch: Partial<StepDraft>) {
     touch();
     setDrafts((list) => list.map((d, i) => (i === index ? { ...d, ...patch } : d)));
   }
 
-  // "Planned repair steps": adds empty steps or removes steps from the end.
-  // Applied when the field loses focus so typing "12" does not pass through "1".
-  function applySteps() {
-    const n = Number(stepsText);
-    if (!/^\d{1,2}$/.test(stepsText) || n > MAX_STEPS) {
-      setStepsText(String(drafts.length));
-      return;
-    }
-    if (n === drafts.length) return;
-    if (n > drafts.length) {
-      edit(() => setDrafts((list) => [...list, ...Array.from({ length: n - list.length }, blankStep)]));
-      return;
-    }
-    const hasWork = drafts.slice(n).some((d) => d.id || d.title.trim() || d.instruction.trim() || d.imagePath);
-    if (hasWork && !window.confirm(`Remove ${drafts.length - n} step(s) from the end?`)) {
-      setStepsText(String(drafts.length));
-      return;
-    }
-    edit(() => setDrafts((list) => list.slice(0, n)));
+  function addStep() {
+    if (drafts.length >= MAX_STEPS) return;
+    edit(() => setDrafts((list) => [...list, blankStep()]));
   }
+
+  // Removes the last step; asks first when it has something written in it.
+  function removeLastStep() {
+    const last = drafts[drafts.length - 1];
+    if (hasWork(last) && !window.confirm(`Remove step ${drafts.length}?`)) return;
+    edit(() => setDrafts((list) => list.slice(0, -1)));
+  }
+
+  // New steps nobody typed in are left out when saving.
+  const kept = drafts.filter((d) => d.id || hasWork(d));
 
   // Returns a problem to show, or null when everything needed is filled in.
   function problem(): string | null {
@@ -181,8 +157,8 @@ function EditorForm({ detail, symptoms: initialSymptoms, devices, dirty, onBack,
     if (minutes.trim() && !/^[1-9]\d{0,3}$/.test(minutes.trim())) {
       return "Enter the time as a whole number of minutes.";
     }
-    if (drafts.some((d) => !d.title.trim() || !d.instruction.trim())) {
-      return "Every step needs a title and an instruction. Lower the number of steps to remove empty ones.";
+    if (kept.some((d) => !d.title.trim() || !d.instruction.trim())) {
+      return "Every step needs a title and an instruction. Use Remove last step to delete an empty one.";
     }
     return null;
   }
@@ -198,14 +174,13 @@ function EditorForm({ detail, symptoms: initialSymptoms, devices, dirty, onBack,
       difficulty: difficulty || null,
       estimatedMinutes: minutes.trim() ? Number(minutes.trim()) : null,
       coverImagePath: coverPath,
-      drafts: drafts.map((d) => ({ ...d, title: d.title.trim(), instruction: d.instruction.trim() })),
+      drafts: kept.map((d) => ({ ...d, title: d.title.trim(), instruction: d.instruction.trim() })),
       original,
     });
     dirty.current = false;
     setGuideId(saved.id);
     setOriginal(saved.steps);
-    setDrafts(toDrafts(saved.steps));
-    setStepsText(String(saved.steps.length));
+    setDrafts(saved.steps.length > 0 ? toDrafts(saved.steps) : [blankStep()]);
     return saved.id;
   }
 
@@ -213,7 +188,7 @@ function EditorForm({ detail, symptoms: initialSymptoms, devices, dirty, onBack,
     dirty,
     status,
     setStatus,
-    stepCount: drafts.length,
+    stepCount: kept.length,
     problem,
     persist,
     writeStatus: setGuideStatus,
@@ -227,17 +202,16 @@ function EditorForm({ detail, symptoms: initialSymptoms, devices, dirty, onBack,
       <div className="flex flex-col gap-2">
         <p className="text-sm font-semibold uppercase tracking-widest text-text-muted">Repair guides</p>
         <h1 className="text-lg font-semibold">
-          {guideId ? "Edit guide" : "Create guide"}
-          <span className="text-accent">.</span>
+          Edit guide<span className="text-accent">.</span>
         </h1>
-        <p className="text-sm text-text-muted">A clear guide is the first step to a confident repair.</p>
+        <p className="text-sm text-text-muted">Write the steps below. Everything else is optional.</p>
       </div>
 
       <TextField label="Guide title" value={title} onChange={(e) => edit(() => setTitle(e.target.value))} />
 
       <div className="grid gap-6 md:grid-cols-2">
         <Select
-          label="Device / model"
+          label="Device"
           value={deviceId}
           placeholder="Choose a device"
           options={devices.map((d) => ({ value: d.id, label: d.archived ? `${d.name} (archived)` : d.name }))}
@@ -249,22 +223,14 @@ function EditorForm({ detail, symptoms: initialSymptoms, devices, dirty, onBack,
           }
         />
         <Select
-          label="Device category"
-          value=""
-          disabled
-          options={[{ value: "", label: categoryLabel }]}
-          onChange={() => undefined}
+          label="Symptom"
+          value={symptomId}
+          placeholder={deviceId ? "Choose a symptom" : "Choose a device first"}
+          disabled={!deviceId}
+          options={symptoms.filter((s) => s.deviceId === deviceId).map((s) => ({ value: s.id, label: s.name }))}
+          onChange={(e) => edit(() => setSymptomId(e.target.value))}
         />
       </div>
-
-      <Select
-        label="Symptom"
-        value={symptomId}
-        placeholder={deviceId ? "Choose a symptom" : "Choose a device first"}
-        disabled={!deviceId}
-        options={symptoms.filter((s) => s.deviceId === deviceId).map((s) => ({ value: s.id, label: s.name }))}
-        onChange={(e) => edit(() => setSymptomId(e.target.value))}
-      />
       {deviceId && (
         <NewSymptom
           deviceId={deviceId}
@@ -276,50 +242,20 @@ function EditorForm({ detail, symptoms: initialSymptoms, devices, dirty, onBack,
         />
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Select
-          label="Difficulty"
-          value={difficulty}
-          options={DIFFICULTY_OPTIONS}
-          onChange={(e) => edit(() => setDifficulty(e.target.value as GuideDifficulty | ""))}
-        />
-        <TextField
-          label="Estimated time (minutes)"
-          inputMode="numeric"
-          help="For example: 30"
-          value={minutes}
-          onChange={(e) => edit(() => setMinutes(e.target.value))}
-        />
-        <TextField
-          label="Planned repair steps"
-          inputMode="numeric"
-          help="Steps are written below."
-          value={stepsText}
-          onChange={(e) => setStepsText(e.target.value)}
-          onBlur={applySteps}
-        />
-        <Select
-          label="Guide type"
-          value={kind}
-          options={KIND_OPTIONS}
-          onChange={(e) => edit(() => setKind(e.target.value as GuideKind))}
-        />
-      </div>
-
       <TextArea
-        label="Guide description"
-        rows={4}
+        label="Short description (optional)"
+        rows={3}
         value={description}
         onChange={(e) => edit(() => setDescription(e.target.value))}
       />
       <ImageField
-        label="Cover photo"
+        label="Cover photo (optional)"
         folder="covers"
         path={coverPath}
         onChange={(path) => edit(() => setCoverPath(path))}
       />
 
-      {drafts.length > 0 && <h2 className="border-t border-border pt-6 text-base font-semibold">Steps</h2>}
+      <h2 className="border-t border-border pt-6 text-base font-semibold">Steps</h2>
       {drafts.map((d, i) => (
         <fieldset key={d.id ?? `new-${i}`} className="flex flex-col gap-4">
           <legend className="mb-2 text-sm font-semibold">Step {i + 1}</legend>
@@ -330,20 +266,48 @@ function EditorForm({ detail, symptoms: initialSymptoms, devices, dirty, onBack,
             onChange={(e) => updateDraft(i, { instruction: e.target.value })}
           />
           <ImageField
-            label="Step photo"
+            label="Step photo (optional)"
             folder="steps"
             path={d.imagePath}
             onChange={(path) => updateDraft(i, { imagePath: path })}
           />
         </fieldset>
       ))}
+      <div className="flex gap-6">
+        {drafts.length < MAX_STEPS && <AddStepButton onAdd={addStep} />}
+        {drafts.length > 0 && <RemoveStepButton number={drafts.length} onRemove={removeLastStep} />}
+      </div>
 
-      <Select
-        label="Publication status"
-        value={statusChoice}
-        options={STATUS_OPTIONS}
-        onChange={(e) => edit(() => setStatusChoice(e.target.value as Status))}
-      />
+      <details className="rounded-md border border-border p-4">
+        <summary className="cursor-pointer text-sm font-semibold">More options</summary>
+        <div className="mt-4 grid gap-6 md:grid-cols-2">
+          <Select
+            label="Difficulty"
+            value={difficulty}
+            options={DIFFICULTY_OPTIONS}
+            onChange={(e) => edit(() => setDifficulty(e.target.value as GuideDifficulty | ""))}
+          />
+          <TextField
+            label="Estimated time (minutes)"
+            inputMode="numeric"
+            help="For example: 30"
+            value={minutes}
+            onChange={(e) => edit(() => setMinutes(e.target.value))}
+          />
+          <Select
+            label="Guide type"
+            value={kind}
+            options={KIND_OPTIONS}
+            onChange={(e) => edit(() => setKind(e.target.value as GuideKind))}
+          />
+          <Select
+            label="Publication status"
+            value={statusChoice}
+            options={STATUS_OPTIONS}
+            onChange={(e) => edit(() => setStatusChoice(e.target.value as Status))}
+          />
+        </div>
+      </details>
 
       {message && (
         <p

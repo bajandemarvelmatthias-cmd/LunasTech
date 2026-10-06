@@ -2,11 +2,13 @@ import { useState } from "react";
 import { PencilSimple } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { GuideImage } from "@/components/ui/GuideImage";
+import { Modal } from "@/components/ui/Modal";
 import { DIFFICULTY_LABEL, KIND_LABEL } from "@/features/guides/types";
 import { LoadError, PageHeader } from "@/features/overview/parts";
 import { cn, formatDate } from "@/lib/utils";
 import { useLoad } from "@/lib/useLoad";
 import { fetchAdminGuides } from "./api";
+import { NewGuideForm } from "./NewGuideForm";
 import {
   DataList,
   EmptyNote,
@@ -28,11 +30,13 @@ const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 // the guide editor. Guides are never deleted, only moved to drafts (decision #14).
 export function GuideAdminList({
   initialFilter = "all",
+  startNew = false,
   onOpen,
-}: Readonly<{ initialFilter?: GuideFilter; onOpen: (guideId: string | null) => void }>) {
+}: Readonly<{ initialFilter?: GuideFilter; startNew?: boolean; onOpen: (guideId: string) => void }>) {
   const { data, loading, error, retry } = useLoad(fetchAdminGuides, []);
   const [filter, setFilter] = useState<GuideFilter>(initialFilter);
   const [query, setQuery] = useState("");
+  const [adding, setAdding] = useState(startNew);
 
   const q = query.trim().toLowerCase();
   const rows = (data ?? []).filter(
@@ -91,8 +95,18 @@ export function GuideAdminList({
 
   return (
     <div className="flex flex-col gap-6 pb-12">
-      <PageHeader title="All guides" actions={<Button className="w-auto" onClick={() => onOpen(null)}>New guide</Button>} />
+      <PageHeader
+        title="All guides"
+        actions={
+          <Button className="w-auto" onClick={() => setAdding(true)}>
+            Add guide
+          </Button>
+        }
+      />
       {body}
+      <Modal open={adding} title="Add guide" onClose={() => setAdding(false)}>
+        <NewGuideForm onCreated={onOpen} onCancel={() => setAdding(false)} />
+      </Modal>
     </div>
   );
 }
