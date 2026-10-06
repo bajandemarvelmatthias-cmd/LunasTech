@@ -588,3 +588,27 @@ The design's tables were drawn as lists that read as tables from md up, because 
 - guide_progress is readable only by its owner, so completion counts across customers are not shown.
 - Simulation counts read step ids because only id, position, prompt and options are readable columns (#3).
 - Typecheck passes. ESLint and a build were not possible in the build environment (Windows-only binaries in node_modules), and nothing was run in a browser or against a live Supabase project.
+
+### #21
+**Date:** 2026-10-06
+**Milestone:** Separate admin and customer access (amends #17)
+
+**Context:**
+Decision #17 let an admin open the customer workspace with "Preview customer" and return with "Back to admin". The human asked that admins have access only to the admin dashboard and customers only to the customer dashboard.
+
+**Options Considered:**
+- A: Keep Preview customer for admins.
+- B: Remove it. The role read from profiles.role picks one workspace and nothing in the app switches it.
+
+**Community Consensus:**
+Not searched. The human asked for B directly.
+
+**Decision:**
+Option B. App.tsx now has two components, AdminWorkspace and CustomerWorkspace, and SignedIn renders exactly one after reading profiles.role. Nothing is shown until the role is known, so an admin never sees a customer screen first. If the role cannot be read, neither workspace opens: the screen shows an error with Try again. Preview customer and Back to admin are removed. Log out stays top right in both.
+
+**Consequences:**
+- An admin can no longer see what a customer sees from inside the app. Check the customer screens with a second, non-admin account.
+- This is a display rule. What each role may read or write is still enforced only by row level security (#3); a customer who somehow opened an admin screen would still be refused by the database.
+- Roles are still changed only in the Supabase dashboard or with the service key.
+- SidebarFooter's onStart is now optional (the admin footer has no start prompt).
+- Typecheck passes. Not run in a browser or against a live Supabase project.

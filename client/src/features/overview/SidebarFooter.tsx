@@ -6,7 +6,7 @@ export function SidebarFooter({
   email,
   admin,
   onStart,
-}: Readonly<{ email: string; admin: boolean; onStart: () => void }>) {
+}: Readonly<{ email: string; admin: boolean; onStart?: () => void }>) {
   return (
     <div className="flex flex-col gap-4">
       {!admin && (

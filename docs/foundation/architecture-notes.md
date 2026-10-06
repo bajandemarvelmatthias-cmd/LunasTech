@@ -108,7 +108,7 @@ LunasTech/
 - components/ui/Modal.tsx -> used by -> features/admin/DevicesAdmin.tsx, SimulationsAllList.tsx (native dialog element)
 - features/admin/SimulationAdmin.tsx and api.ts (simulation functions) -> depend on -> admin_simulation_steps(), tables simulations and simulation_steps (column privileges and check constraints: 2 to 6 options, correct_option in range, unique (simulation_id, position)); the options-as-text assumption shared with features/simulations (open-questions #16)
 - recalculate_learning_level() -> depends on -> simulation_attempts.passed, guides.kind
-- src/App.tsx -> depends on -> features/admin (AdminFlow, DevicesAdmin, CustomersAdmin, fetchIsAdmin; the admin tabs appear only for admins); features/auth (AuthProvider, AuthFlow, ResetPasswordScreen), features/guides/GuidesFlow, features/progress/ProgressScreen, layout/Shell.tsx, components/ui/Button.tsx
+- src/App.tsx -> depends on -> features/admin (AdminFlow, DevicesAdmin, CustomersAdmin, fetchIsAdmin; SignedIn renders AdminWorkspace or CustomerWorkspace, never both, decision #21); features/auth (AuthProvider, AuthFlow, ResetPasswordScreen), features/guides/GuidesFlow, features/progress/ProgressScreen, layout/Shell.tsx, components/ui/Button.tsx
 - features/guides/api.ts -> depends on -> tables device_types, symptoms, guides, guide_steps, guide_progress in the initial_schema migration (renaming a column breaks it) and the row level security policies on them
 - features/guides/GuideScreen.tsx -> depends on -> features/auth/AuthProvider (user id for guide_progress), lib/useLoad.ts
 - features/guides/* -> depends on -> components/ui/* (BackButton, ChoiceList, Button), index.css tokens
@@ -162,3 +162,4 @@ AI: when the structure changes during the build, log it here.
 | 2026-10-06 | Added supabase/tests/smoke_test.sql (scoring, hidden answers, admin rights; rolls back) | Migration was untested and no database was available to run it |
 | 2026-10-06 | Added placeholder PWA icons, manifest icons and an apple-touch-icon link | So installing can be tested; real icon still open (open-questions #3) |
 | 2026-10-06 | Added features/admin GuideAdminList, SimulationsAllList, DevicesAdmin, CustomersAdmin, parts.tsx, exportReport.ts; AdminFlow gained a section prop; AdminOverview rewritten; components/ui gained Modal and OutlineButton; StatCard gained note and onClick; App.tsx gained five admin tabs; removed fetchUserCount (replaced by fetchAdminCounts) | Decision #20 |
+| 2026-10-06 | App.tsx split into AdminWorkspace and CustomerWorkspace; SignedIn waits for profiles.role and renders one; Preview customer and Back to admin removed; SidebarFooter onStart optional | Decision #21 |
