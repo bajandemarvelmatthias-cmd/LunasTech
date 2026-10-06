@@ -748,3 +748,28 @@ Option A. No schema change.
 - A deleted device cannot be restored. Customers' saved or finished work is never affected, because a device with no guides has none.
 - Guides are still never deleted.
 - Typecheck passes. Not run in a browser or against a live Supabase project.
+
+### #27
+**Date:** 2026-10-06
+**Milestone:** Deleting a device with guides archives it (amends #26)
+
+**Context:**
+#26 showed a bin for devices without guides and a separate archive icon for devices with guides. The human asked that deleting a device that has guides creates an archive instead.
+
+**Options Considered:**
+- A: One bin icon for every device. With no guides it deletes for good; with guides it archives.
+- B: Keep the two icons from #26.
+
+**Community Consensus:**
+Not searched. Chosen by the human's request.
+
+**Decision:**
+Option A. No schema change.
+- Bin on a device with guides: "X has N guides, so it can't be deleted. Archive it instead?" Confirming archives the device. Customers no longer see it; its guides are kept.
+- Bin on a device with no guides: permanent delete, as in #26.
+- An archived device with guides shows the restore icon. It appears under the Archived filter and in Edit device.
+- If a guide was added after the page loaded, the refused delete falls back to archiving and says so.
+
+**Consequences:**
+- The archive icon from #26 is gone. The bin means "delete, or archive when guides exist"; the dialog says which.
+- Typecheck passes. Not run in a browser or against a live Supabase project.

@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from "react";
 import {
-  Archive,
   ArrowCounterClockwise,
   DeviceMobile,
   DeviceTablet,
@@ -110,40 +109,48 @@ export function DevicesAdmin() {
   const [rowError, setRowError] = useState<string>();
   const [workingId, setWorkingId] = useState<string>();
 
-  // Bin icon on a device with no guides: delete it for good, with its symptoms.
+  // Archives a device so customers no longer see it. Its guides are kept.
+  async function archive(d: DeviceSummary, notice?: string) {
+    await updateDevice(d.id, { name: d.name, category: d.category, notes: d.notes, status: "archived" });
+    if (notice) setRowError(notice);
+  }
+
+  // The bin icon. A device with no guides is deleted for good, with its
+  // symptoms. A device with guides cannot be deleted, so it is archived instead
+  // (decision-log.md #27); guides are never deleted.
   async function remove(d: DeviceSummary) {
+    const hasGuides = d.guides > 0;
     const n = d.symptoms.length;
     const also = n > 0 ? ` This also deletes its ${n} ${n === 1 ? "symptom" : "symptoms"}.` : "";
-    if (!window.confirm(`Delete ${d.name} permanently?${also} This can't be undone.`)) return;
+    const ok = window.confirm(
+      hasGuides
+        ? `${d.name} has ${d.guides} ${d.guides === 1 ? "guide" : "guides"}, so it can't be deleted. Archive it instead? Customers will no longer see it. Its guides are kept and you can restore it later.`
+        : `Delete ${d.name} permanently?${also} This can't be undone.`,
+    );
+    if (!ok) return;
     setWorkingId(d.id);
     setRowError(undefined);
     try {
-      const result = await deleteDevice(d.id);
-      if (result === "blocked") {
-        setRowError(`${d.name} now has guides, so it can't be deleted. Archive it instead.`);
+      if (hasGuides) {
+        await archive(d);
+      } else if ((await deleteDevice(d.id)) === "blocked") {
+        // A guide was added after this page loaded.
+        await archive(d, `${d.name} now has guides, so it was archived instead of deleted.`);
       }
       retry();
     } catch {
-      setRowError("Could not delete. Check your connection and try again.");
+      setRowError(hasGuides ? SAVE_FAILED : "Could not delete. Check your connection and try again.");
     } finally {
       setWorkingId(undefined);
     }
   }
 
-  // A device with guides is never deleted (its guides keep their links): the
-  // archive icon hides it from customers, and restores it when already archived.
-  async function toggleArchived(d: DeviceSummary) {
-    const next: DeviceStatus = d.status === "active" ? "archived" : "active";
-    if (
-      next === "archived" &&
-      !window.confirm(`Archive ${d.name}? Customers will no longer see it. Its guides are kept and you can restore it later.`)
-    ) {
-      return;
-    }
+  // Restores an archived device that has guides.
+  async function restore(d: DeviceSummary) {
     setWorkingId(d.id);
     setRowError(undefined);
     try {
-      await updateDevice(d.id, { name: d.name, category: d.category, notes: d.notes, status: next });
+      await updateDevice(d.id, { name: d.name, category: d.category, notes: d.notes, status: "active" });
       retry();
     } catch {
       setRowError(SAVE_FAILED);
@@ -227,7 +234,18 @@ export function DevicesAdmin() {
                       >
                         <PencilSimple className="size-5" aria-hidden="true" />
                       </button>
-                      {d.guides === 0 ? (
+                      {d.guides > 0 && d.status === "archived" ? (
+                        <button
+                          type="button"
+                          onClick={() => void restore(d)}
+                          disabled={workingId === d.id}
+                          aria-label={`Restore ${d.name}`}
+                          title="Restore"
+                          className={ICON_BUTTON}
+                        >
+                          <ArrowCounterClockwise className="size-5" aria-hidden="true" />
+                        </button>
+                      ) : (
                         <button
                           type="button"
                           onClick={() => void remove(d)}
@@ -237,21 +255,6 @@ export function DevicesAdmin() {
                           className={ICON_BUTTON}
                         >
                           <Trash className="size-5" aria-hidden="true" />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => void toggleArchived(d)}
-                          disabled={workingId === d.id}
-                          aria-label={d.status === "active" ? `Archive ${d.name}` : `Restore ${d.name}`}
-                          title={d.status === "active" ? "Archive" : "Restore"}
-                          className={ICON_BUTTON}
-                        >
-                          {d.status === "active" ? (
-                            <Archive className="size-5" aria-hidden="true" />
-                          ) : (
-                            <ArrowCounterClockwise className="size-5" aria-hidden="true" />
-                          )}
                         </button>
                       )}
                     </span>
