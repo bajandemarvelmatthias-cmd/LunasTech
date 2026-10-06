@@ -457,6 +457,21 @@ export async function updateDevice(id: string, fields: DeviceFields): Promise<vo
   if (error) throw error;
 }
 
+// Permanently deletes a device and, with it, its symptoms. Only allowed while
+// no guide uses the device: guides point at symptoms with on delete restrict,
+// so the database refuses otherwise and nothing is removed. Returns "blocked"
+// in that case so the screen can say why.
+export async function deleteDevice(id: string): Promise<"deleted" | "blocked"> {
+  const { data, error } = await supabase.from("device_types").delete().eq("id", id).select("id");
+  if (error) {
+    if ((error as { code?: string }).code === "23503") return "blocked";
+    throw error;
+  }
+  // No row back means nothing was deleted (it is gone already, or not allowed).
+  if (!data || data.length === 0) throw new Error("Device was not deleted");
+  return "deleted";
+}
+
 // Postgres unique violation: the same name already exists.
 export function isDuplicate(error: unknown): boolean {
   return typeof error === "object" && error !== null && (error as { code?: string }).code === "23505";

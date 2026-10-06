@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import {
+  Archive,
   ArrowCounterClockwise,
   DeviceMobile,
   DeviceTablet,
@@ -17,7 +18,7 @@ import { TextField } from "@/components/ui/TextField";
 import { LoadError } from "@/features/overview/parts";
 import { cn } from "@/lib/utils";
 import { useLoad } from "@/lib/useLoad";
-import { createDevice, createSymptom, fetchDeviceSummaries, isDuplicate, updateDevice } from "./api";
+import { createDevice, createSymptom, deleteDevice, fetchDeviceSummaries, isDuplicate, updateDevice } from "./api";
 import {
   DataList,
   EmptyNote,
@@ -98,8 +99,8 @@ function DeviceTile({ category }: Readonly<{ category: DeviceCategory | null }>)
 
 // Device types and their symptoms. These two tables are what the customer
 // picks from before any guide. Both lists are read from one query; adding is
-// writes (devices are edited or archived, never deleted, so existing guides
-// keep their links).
+// writes. A device with guides is edited or archived, so its guides keep their
+// links; a device with no guides can be deleted for good (decision-log.md #26).
 export function DevicesAdmin() {
   const { data, loading, error, retry } = useLoad(fetchDeviceSummaries, []);
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -109,8 +110,28 @@ export function DevicesAdmin() {
   const [rowError, setRowError] = useState<string>();
   const [workingId, setWorkingId] = useState<string>();
 
-  // Devices are never deleted (guides keep their links): the bin icon archives
-  // a device, and restores it when it is already archived.
+  // Bin icon on a device with no guides: delete it for good, with its symptoms.
+  async function remove(d: DeviceSummary) {
+    const n = d.symptoms.length;
+    const also = n > 0 ? ` This also deletes its ${n} ${n === 1 ? "symptom" : "symptoms"}.` : "";
+    if (!window.confirm(`Delete ${d.name} permanently?${also} This can't be undone.`)) return;
+    setWorkingId(d.id);
+    setRowError(undefined);
+    try {
+      const result = await deleteDevice(d.id);
+      if (result === "blocked") {
+        setRowError(`${d.name} now has guides, so it can't be deleted. Archive it instead.`);
+      }
+      retry();
+    } catch {
+      setRowError("Could not delete. Check your connection and try again.");
+    } finally {
+      setWorkingId(undefined);
+    }
+  }
+
+  // A device with guides is never deleted (its guides keep their links): the
+  // archive icon hides it from customers, and restores it when already archived.
   async function toggleArchived(d: DeviceSummary) {
     const next: DeviceStatus = d.status === "active" ? "archived" : "active";
     if (
@@ -206,20 +227,33 @@ export function DevicesAdmin() {
                       >
                         <PencilSimple className="size-5" aria-hidden="true" />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => void toggleArchived(d)}
-                        disabled={workingId === d.id}
-                        aria-label={d.status === "active" ? `Archive ${d.name}` : `Restore ${d.name}`}
-                        title={d.status === "active" ? "Archive" : "Restore"}
-                        className={ICON_BUTTON}
-                      >
-                        {d.status === "active" ? (
+                      {d.guides === 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => void remove(d)}
+                          disabled={workingId === d.id}
+                          aria-label={`Delete ${d.name}`}
+                          title="Delete"
+                          className={ICON_BUTTON}
+                        >
                           <Trash className="size-5" aria-hidden="true" />
-                        ) : (
-                          <ArrowCounterClockwise className="size-5" aria-hidden="true" />
-                        )}
-                      </button>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void toggleArchived(d)}
+                          disabled={workingId === d.id}
+                          aria-label={d.status === "active" ? `Archive ${d.name}` : `Restore ${d.name}`}
+                          title={d.status === "active" ? "Archive" : "Restore"}
+                          className={ICON_BUTTON}
+                        >
+                          {d.status === "active" ? (
+                            <Archive className="size-5" aria-hidden="true" />
+                          ) : (
+                            <ArrowCounterClockwise className="size-5" aria-hidden="true" />
+                          )}
+                        </button>
+                      )}
                     </span>
                   </li>
                 ))}

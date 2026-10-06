@@ -720,3 +720,31 @@ Option A. No schema change and no new component.
 **Consequences:**
 - The step editor page is still titled "Edit guide." It is now only reached from Create guide and Edit steps; rename it (for example "Guide steps") if two screens with one title is confusing.
 - Typecheck passes. Not run in a browser or against a live Supabase project.
+
+### #26
+**Date:** 2026-10-06
+**Milestone:** Permanent delete for devices that have no guides (amends #20, #23)
+
+**Context:**
+The Devices page only archived a device, using a bin icon. The human asked that deleting a device really deletes it.
+
+**Options Considered:**
+- A: Delete for good only when the device has no guides. A device with guides stays archive-only.
+- B: Delete the device together with its guides, steps, simulations and users' progress.
+- C: Keep archive only and make the message clearer.
+
+**Community Consensus:**
+Not searched. Chosen by the human (option 1).
+
+**Decision:**
+Option A. No schema change.
+- The bin icon on a device with no guides asks "Delete X permanently?" (naming how many symptoms go with it) and deletes the device and its symptoms.
+- A device with guides shows an archive icon instead (restore icon when already archived), so the bin always means delete and the archive icon always means archive.
+- The database is the safety net: a guide's symptom cannot be deleted while a guide uses it (on delete restrict), so a delete that races with a new guide is refused and the screen says so.
+- An archived device with no guides can be deleted with the bin; to bring one back, set its Status to Active in Edit device.
+- B was rejected: it would erase guides and users' progress, against decision #14.
+
+**Consequences:**
+- A deleted device cannot be restored. Customers' saved or finished work is never affected, because a device with no guides has none.
+- Guides are still never deleted.
+- Typecheck passes. Not run in a browser or against a live Supabase project.
