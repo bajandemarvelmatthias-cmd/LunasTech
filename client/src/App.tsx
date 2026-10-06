@@ -73,6 +73,8 @@ function CustomerWorkspace({ email }: Readonly<{ email: string }>) {
   const [tab, setTab] = useState("overview");
   // Opening guides from the dashboard remounts the flow so it can start at a device or a guide.
   const [guidesTarget, setGuidesTarget] = useState<{ id: number; start?: GuidesStart }>({ id: 0 });
+  // The guide cards screen is wide; the steps after it are a narrow column.
+  const [guidesWide, setGuidesWide] = useState(true);
 
   function openGuides(start?: GuidesStart) {
     setGuidesTarget((t) => ({ id: t.id + 1, start }));
@@ -81,7 +83,7 @@ function CustomerWorkspace({ email }: Readonly<{ email: string }>) {
 
   return (
     <Shell
-      wide={tab === "overview"}
+      wide={tab === "overview" || (tab === "guides" && guidesWide)}
       sidebarFooter={<SidebarFooter email={email} admin={false} onStart={() => openGuides()} />}
       workspace="Your workspace"
       account={LOG_OUT}
@@ -90,7 +92,7 @@ function CustomerWorkspace({ email }: Readonly<{ email: string }>) {
       {tab === "overview" && <CustomerOverview onOpen={openGuides} />}
       {/* Guides stays mounted so the person keeps their place; Progress reloads each visit. */}
       <div hidden={tab !== "guides"}>
-        <GuidesFlow key={guidesTarget.id} start={guidesTarget.start} />
+        <GuidesFlow key={guidesTarget.id} start={guidesTarget.start} onWide={setGuidesWide} />
       </div>
       {tab === "progress" && <ProgressScreen />}
     </Shell>

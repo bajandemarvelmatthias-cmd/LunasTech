@@ -6,6 +6,14 @@ export type GuideKind = "small_fix" | "major_repair";
 export type GuideDifficulty = "easy" | "moderate" | "hard";
 // The picture, difficulty, time and step count are optional so a guide without
 // them still shows (admins fill them in; older guides have none).
+export type DeviceCategory = "smartphones" | "laptops" | "tablets" | "game_consoles";
+export const DEVICE_CATEGORY_LABEL: Record<DeviceCategory, string> = {
+  smartphones: "Smartphones",
+  laptops: "Laptops",
+  tablets: "Tablets",
+  game_consoles: "Game consoles",
+};
+
 export type Guide = {
   id: string;
   title: string;
@@ -15,6 +23,10 @@ export type Guide = {
   cover_image_path?: string | null;
   description?: string | null;
   step_count?: number;
+  // Only filled by the browse list: the device and symptom the guide belongs to.
+  device_name?: string;
+  device_category?: DeviceCategory | null;
+  symptom_name?: string;
 };
 export type GuideStep = {
   id: string;

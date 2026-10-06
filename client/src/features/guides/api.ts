@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { DeviceType, Guide, GuideProgress, GuideStep, Symptom } from "./types";
+import type { DeviceCategory, DeviceType, Guide, GuideProgress, GuideStep, Symptom } from "./types";
 
 // Row level security decides what each user can read. Guides are filtered to
 // published here as well so admins browsing as users do not see drafts.
@@ -78,4 +78,34 @@ export async function saveProgress(
     { onConflict: "user_id,guide_id" },
   );
   if (error) throw error;
+}
+
+// Every published guide on an active device, for the browse screen. Each guide
+// carries its device and symptom so the cards can name them and be filtered
+// by device category.
+export async function fetchAllGuides(): Promise<Guide[]> {
+  const { data, error } = await supabase
+    .from("guides")
+    .select(
+      "id, title, kind, difficulty, estimated_minutes, cover_image_path, description, guide_steps(count), symptoms(name, device_types(name, category, status))",
+    )
+    .eq("status", "published")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  type Row = Omit<Guide, "step_count" | "device_name" | "device_category" | "symptom_name"> & {
+    guide_steps: { count: number }[];
+    symptoms: {
+      name: string;
+      device_types: { name: string; category: DeviceCategory | null; status: string } | null;
+    } | null;
+  };
+  return (data as unknown as Row[])
+    .filter((g) => g.symptoms?.device_types?.status === "active")
+    .map(({ guide_steps, symptoms, ...g }) => ({
+      ...g,
+      step_count: guide_steps[0]?.count ?? 0,
+      device_name: symptoms?.device_types?.name,
+      device_category: symptoms?.device_types?.category ?? null,
+      symptom_name: symptoms?.name,
+    }));
 }

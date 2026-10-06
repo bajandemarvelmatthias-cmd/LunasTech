@@ -3,6 +3,7 @@ import { useHistoryStack } from "@/lib/useHistoryStack";
 import { useLoad } from "@/lib/useLoad";
 import { fetchDevices, fetchGuides, fetchSymptoms } from "./api";
 import { GuideScreen } from "./GuideScreen";
+import { GuideBrowse } from "./GuideBrowse";
 import { GuideCards } from "./GuideParts";
 import { ListScreen } from "./ListScreen";
 import { SimulationList } from "@/features/simulations/SimulationList";
@@ -11,6 +12,7 @@ import type { Simulation } from "@/features/simulations/types";
 import { KIND_LABEL, type DeviceType, type Guide, type Symptom } from "./types";
 
 type Route =
+  | { name: "browse" }
   | { name: "devices" }
   | { name: "symptoms"; device: DeviceType }
   | { name: "guides"; device: DeviceType; symptom: Symptom }
@@ -26,8 +28,11 @@ export type GuidesStart = Extract<Route, { name: "symptoms" | "guide" }>;
 // simulation (opened automatically when the guide has exactly one).
 // State-based like AuthFlow. The browser back button goes back one screen
 // (lib/useHistoryStack.ts); the URL does not change.
-export function GuidesFlow({ start }: Readonly<{ start?: GuidesStart }>) {
-  const { current: route, push, pop, replace, reset: home } = useHistoryStack<Route>({ name: "devices" });
+export function GuidesFlow({
+  start,
+  onWide,
+}: Readonly<{ start?: GuidesStart; onWide?: (wide: boolean) => void }>) {
+  const { current: route, push, pop, replace, reset: home } = useHistoryStack<Route>({ name: "browse" });
   const seeded = useRef(false);
 
   useEffect(() => {
@@ -37,9 +42,24 @@ export function GuidesFlow({ start }: Readonly<{ start?: GuidesStart }>) {
     }
   }, [start, push]);
 
+  // The browse screen is a wide card grid; the other steps are a narrow column.
+  const browsing = route.name === "browse";
+  useEffect(() => {
+    onWide?.(browsing);
+    // onWide changes identity every render; `browsing` is the trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [browsing]);
+
   switch (route.name) {
+    case "browse":
+      return (
+        <GuideBrowse
+          onSelect={(guide) => push({ name: "guide", guide })}
+          onFindBySymptom={() => push({ name: "devices" })}
+        />
+      );
     case "devices":
-      return <DeviceList onSelect={(device) => push({ name: "symptoms", device })} />;
+      return <DeviceList onBack={pop} onSelect={(device) => push({ name: "symptoms", device })} />;
     case "symptoms":
       return (
         <SymptomList
@@ -81,11 +101,15 @@ export function GuidesFlow({ start }: Readonly<{ start?: GuidesStart }>) {
   }
 }
 
-function DeviceList({ onSelect }: Readonly<{ onSelect: (device: DeviceType) => void }>) {
+function DeviceList({
+  onBack,
+  onSelect,
+}: Readonly<{ onBack: () => void; onSelect: (device: DeviceType) => void }>) {
   const { data, loading, error, retry } = useLoad(fetchDevices, []);
   return (
     <ListScreen
       title="Device"
+      onBack={onBack}
       loading={loading}
       error={error}
       onRetry={retry}
