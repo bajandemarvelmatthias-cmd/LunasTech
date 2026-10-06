@@ -101,7 +101,8 @@ export type DeviceStatus = "active" | "archived";
 
 export const CATEGORY_LABEL: Record<DeviceCategory, string> = {
   smartphones: "Smartphones",
-  laptops: "Laptops",
+  // Stored as "laptops"; shown as Desktops so one type covers laptops and computers.
+  laptops: "Desktops",
   tablets: "Tablets",
   game_consoles: "Game consoles",
 };
@@ -109,7 +110,6 @@ export const CATEGORY_LABEL: Record<DeviceCategory, string> = {
 // What an admin can set on a device (the form and the save call).
 export type DeviceFields = {
   name: string;
-  manufacturer: string;
   category: DeviceCategory | null;
   notes: string;
   status: DeviceStatus;

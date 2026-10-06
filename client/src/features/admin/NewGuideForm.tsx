@@ -114,7 +114,7 @@ export function NewGuideForm({
     try {
       const deviceId =
         existing?.id ??
-        (await createDevice({ name: device.trim(), manufacturer: "", category, notes: "", status: "active" }));
+        (await createDevice({ name: device.trim(), category, notes: "", status: "active" }));
       const symptomId =
         deviceSymptoms.find((s) => same(s.name, symptom))?.id ?? (await createSymptom(deviceId, symptom.trim()));
       const saved = await saveGuide({

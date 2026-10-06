@@ -406,7 +406,6 @@ export async function fetchAllSimulations(): Promise<SimulationListRow[]> {
 type DeviceQuery = {
   id: string;
   name: string;
-  manufacturer: string | null;
   category: DeviceFields["category"];
   notes: string | null;
   status: DeviceFields["status"];
@@ -416,7 +415,7 @@ type DeviceQuery = {
 export async function fetchDeviceSummaries(): Promise<DeviceSummary[]> {
   const { data, error } = await supabase
     .from("device_types")
-    .select("id, name, manufacturer, category, notes, status, symptoms(id, name, guides(id, status))")
+    .select("id, name, category, notes, status, symptoms(id, name, guides(id, status))")
     .order("name");
   if (error) throw error;
   return (data as unknown as DeviceQuery[]).map((d) => {
@@ -424,7 +423,6 @@ export async function fetchDeviceSummaries(): Promise<DeviceSummary[]> {
     return {
       id: d.id,
       name: d.name,
-      manufacturer: d.manufacturer ?? "",
       category: d.category,
       notes: d.notes ?? "",
       status: d.status,
@@ -441,7 +439,6 @@ export async function fetchDeviceSummaries(): Promise<DeviceSummary[]> {
 function deviceRow(f: DeviceFields) {
   return {
     name: f.name,
-    manufacturer: f.manufacturer || null,
     category: f.category,
     notes: f.notes || null,
     status: f.status,

@@ -9,7 +9,8 @@ export type GuideDifficulty = "easy" | "moderate" | "hard";
 export type DeviceCategory = "smartphones" | "laptops" | "tablets" | "game_consoles";
 export const DEVICE_CATEGORY_LABEL: Record<DeviceCategory, string> = {
   smartphones: "Smartphones",
-  laptops: "Laptops",
+  // Stored as "laptops"; shown as Desktops so one type covers laptops and computers.
+  laptops: "Desktops",
   tablets: "Tablets",
   game_consoles: "Game consoles",
 };
