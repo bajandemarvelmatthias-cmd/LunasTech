@@ -35,7 +35,7 @@ export function SimulationScreen({ simulation, onBack, onExit }: Readonly<Props>
           <Button onClick={retry}>Try again</Button>
         </div>
       )}
-      {!loading && data && data.steps.length === 0 && (
+      {!loading && data?.steps.length === 0 && (
         <p className="text-base text-text-muted">This simulation has no steps yet.</p>
       )}
       {!loading && data && data.steps.length > 0 && (
@@ -180,12 +180,12 @@ function Runner({ attemptId, steps, results, onRetake, onExit }: Readonly<Runner
         <p className="text-sm text-text-muted">Your first answer was wrong. Choose again.</p>
       )}
       {result && (
-        <div role="status" className="flex flex-col gap-2">
+        <output className="flex flex-col gap-2">
           <p className={cn("text-base font-semibold", !result.correct && "text-danger")}>
             {feedbackLabel(result)}
           </p>
           <p className="text-base">{result.feedback}</p>
-        </div>
+        </output>
       )}
       {failed && (
         <p role="alert" className="text-sm text-danger">

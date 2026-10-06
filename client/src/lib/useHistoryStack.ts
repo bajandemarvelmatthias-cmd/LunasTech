@@ -10,7 +10,7 @@ export function useHistoryStack<T>(initial: T) {
   const length = useRef(1);
 
   useEffect(() => {
-    history.replaceState({ ...(history.state ?? {}), [KEY]: 1 }, "");
+    history.replaceState({ ...history.state, [KEY]: 1 }, "");
 
     function onPopState(event: PopStateEvent) {
       const depth: unknown = event.state?.[KEY];

@@ -39,7 +39,7 @@ export function GuideScreen({ guide, onBack, onFinished }: Readonly<Props>) {
           <Button onClick={retry}>Try again</Button>
         </div>
       )}
-      {!loading && data && data.steps.length === 0 && (
+      {!loading && data?.steps.length === 0 && (
         <p className="text-base text-text-muted">This guide has no steps yet.</p>
       )}
       {!loading && data && data.steps.length > 0 && (

@@ -110,10 +110,17 @@ async function syncSteps<O extends { id: string; position: number }, D extends {
   }
 
   const byId = new Map(original.map((o) => [o.id, o]));
-  for (const d of drafts) {
+  // Each update touches a different row (position is never changed), so they can run together.
+  const updates = drafts.flatMap((d) => {
     const before = d.id ? byId.get(d.id) : undefined;
-    if (!d.id || !before || skip(d) || !opts.changed(before, d)) continue;
-    const { error } = await supabase.from(table).update(opts.toUpdate(d)).eq("id", d.id);
+    return d.id && before && !skip(d) && opts.changed(before, d)
+      ? [{ id: d.id, row: opts.toUpdate(d) }]
+      : [];
+  });
+  const results = await Promise.all(
+    updates.map((u) => supabase.from(table).update(u.row).eq("id", u.id)),
+  );
+  for (const { error } of results) {
     if (error) throw error;
   }
 

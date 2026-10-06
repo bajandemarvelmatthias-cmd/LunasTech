@@ -133,7 +133,7 @@ function EditorForm({
     return saved.id;
   }
 
-  const { busy, message, touch, save, toggleStatus } = useEditorActions({
+  const { busy, message, touch, edit, save, toggleStatus } = useEditorActions({
     dirty,
     status,
     setStatus,
@@ -148,13 +148,13 @@ function EditorForm({
       <h1 className="text-lg font-semibold">{guideId ? "Edit guide" : "New guide"}</h1>
       <p className="text-sm text-text-muted">{STATUS_LABEL[status]}</p>
 
-      <TextField label="Title" value={title} onChange={(e) => (touch(), setTitle(e.target.value))} />
+      <TextField label="Title" value={title} onChange={(e) => edit(() => setTitle(e.target.value))} />
       <Select
         label="Symptom"
         value={symptomId}
         placeholder="Choose a symptom"
         options={symptoms.map((s) => ({ value: s.id, label: s.label }))}
-        onChange={(e) => (touch(), setSymptomId(e.target.value))}
+        onChange={(e) => edit(() => setSymptomId(e.target.value))}
       />
       <NewSymptom
         onCreated={(id, list) => {
@@ -167,7 +167,7 @@ function EditorForm({
         label="Kind"
         value={kind}
         options={KIND_OPTIONS}
-        onChange={(e) => (touch(), setKind(e.target.value as GuideKind))}
+        onChange={(e) => edit(() => setKind(e.target.value as GuideKind))}
       />
 
       {drafts.map((d, i) => (
@@ -180,12 +180,12 @@ function EditorForm({
             onChange={(e) => updateDraft(i, { instruction: e.target.value })}
           />
           {i === drafts.length - 1 && (
-            <RemoveStepButton number={i + 1} onRemove={() => (touch(), setDrafts((list) => list.slice(0, -1)))} />
+            <RemoveStepButton number={i + 1} onRemove={() => edit(() => setDrafts((list) => list.slice(0, -1)))} />
           )}
         </fieldset>
       ))}
       <AddStepButton
-        onAdd={() => (touch(), setDrafts((list) => [...list, { id: null, title: "", instruction: "" }]))}
+        onAdd={() => edit(() => setDrafts((list) => [...list, { id: null, title: "", instruction: "" }]))}
       />
 
       <SaveBar message={message} busy={busy} status={status} onSave={save} onToggleStatus={toggleStatus} />

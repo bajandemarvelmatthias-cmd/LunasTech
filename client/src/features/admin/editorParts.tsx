@@ -75,6 +75,12 @@ export function useEditorActions(input: ActionsInput) {
     setMessage(null);
   }
 
+  // Runs a form change and marks the form as edited.
+  function edit(change: () => void) {
+    touch();
+    change();
+  }
+
   async function run(action: () => Promise<string>) {
     const found = problem();
     if (found) {
@@ -113,7 +119,7 @@ export function useEditorActions(input: ActionsInput) {
     });
   };
 
-  return { busy, message, touch, save, toggleStatus };
+  return { busy, message, touch, edit, save, toggleStatus };
 }
 
 // Message line, Save button and Publish / Move to drafts link.

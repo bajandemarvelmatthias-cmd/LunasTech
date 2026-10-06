@@ -149,7 +149,7 @@ function SimulationForm({
   }
 
   // Users only see a simulation when it and its guide are both published.
-  const { busy, message, touch, save, toggleStatus } = useEditorActions({
+  const { busy, message, touch, edit, save, toggleStatus } = useEditorActions({
     dirty,
     status,
     setStatus,
@@ -167,7 +167,7 @@ function SimulationForm({
       <TextField
         label="Title"
         value={title}
-        onChange={(e) => (touch(), setTitle(e.target.value))}
+        onChange={(e) => edit(() => setTitle(e.target.value))}
       />
 
       {drafts.map((d, i) => (
@@ -199,11 +199,11 @@ function SimulationForm({
           />
           <TextArea label="Feedback" rows={3} value={d.feedback} onChange={(e) => update(i, { feedback: e.target.value })} />
           {i === drafts.length - 1 && (
-            <RemoveStepButton number={i + 1} onRemove={() => (touch(), setDrafts((list) => list.slice(0, -1)))} />
+            <RemoveStepButton number={i + 1} onRemove={() => edit(() => setDrafts((list) => list.slice(0, -1)))} />
           )}
         </fieldset>
       ))}
-      <AddStepButton onAdd={() => (touch(), setDrafts((list) => [...list, NEW_STEP]))} />
+      <AddStepButton onAdd={() => edit(() => setDrafts((list) => [...list, NEW_STEP]))} />
 
       <SaveBar message={message} busy={busy} status={status} onSave={save} onToggleStatus={toggleStatus} />
     </div>
