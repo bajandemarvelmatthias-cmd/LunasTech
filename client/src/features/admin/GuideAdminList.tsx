@@ -31,12 +31,26 @@ const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 export function GuideAdminList({
   initialFilter = "all",
   startNew = false,
+  initialEdit,
   onOpen,
-}: Readonly<{ initialFilter?: GuideFilter; startNew?: boolean; onOpen: (guideId: string, start?: NewGuideStart) => void }>) {
+}: Readonly<{
+  initialFilter?: GuideFilter;
+  startNew?: boolean;
+  // A guide id to open in the Edit guide dialog straight away.
+  initialEdit?: string;
+  // Opens the step editor page (after Create guide, or from Edit steps).
+  onOpen: (guideId: string, start?: NewGuideStart) => void;
+}>) {
   const { data, loading, error, retry } = useLoad(fetchAdminGuides, []);
   const [filter, setFilter] = useState<GuideFilter>(initialFilter);
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(startNew);
+  const [editingId, setEditingId] = useState<string | null>(initialEdit ?? null);
+
+  const closeForm = () => {
+    setAdding(false);
+    setEditingId(null);
+  };
 
   const q = query.trim().toLowerCase();
   const rows = (data ?? []).filter(
@@ -67,7 +81,7 @@ export function GuideAdminList({
               <li key={g.id}>
                 <button
                   type="button"
-                  onClick={() => onOpen(g.id)}
+                  onClick={() => setEditingId(g.id)}
                   className={cn("grid w-full items-center gap-4 px-6 py-4 text-left hover:bg-surface-secondary", GRID, focus)}
                 >
                   <span className="flex min-w-0 items-center gap-4">
@@ -104,8 +118,27 @@ export function GuideAdminList({
         }
       />
       {body}
-      <Modal open={adding} wide title="Create guide" heading={<NewGuideHeading />} onClose={() => setAdding(false)}>
-        <NewGuideForm onCreated={onOpen} onCancel={() => setAdding(false)} />
+      <Modal
+        open={adding || editingId !== null}
+        wide
+        title={editingId ? "Edit guide" : "Create guide"}
+        heading={<NewGuideHeading editing={editingId !== null} />}
+        onClose={closeForm}
+      >
+        {editingId ? (
+          <NewGuideForm
+            key={editingId}
+            guideId={editingId}
+            onSaved={() => {
+              closeForm();
+              retry();
+            }}
+            onEditSteps={onOpen}
+            onCancel={closeForm}
+          />
+        ) : (
+          <NewGuideForm onCreated={onOpen} onCancel={closeForm} />
+        )}
       </Modal>
     </div>
   );

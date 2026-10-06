@@ -693,3 +693,30 @@ Option B. No schema change, no new dependency.
 - Saving still needs every step to have a title and an instruction; lower Planned repair steps to drop empty ones.
 - Removing steps with text or a photo asks for confirmation.
 - Typecheck passes. Not run in a browser or against a live Supabase project.
+
+### #25
+**Date:** 2026-10-06
+**Milestone:** Edit guide opens the same dialog as Create guide (amends #24)
+
+**Context:**
+Clicking a guide in the list opened a different page (the step editor) from the Create guide dialog, with a different layout and fields. The human asked that editing look and work the same as creating.
+
+**Options Considered:**
+- A: Edit opens the Create guide dialog, filled with the guide's current values. Steps stay in the step editor, one click away.
+- B: Make the step editor page copy the dialog's layout.
+
+**Community Consensus:**
+Not searched. Chosen to match the human's request with the least new UI.
+
+**Decision:**
+Option A. No schema change and no new component.
+- A row in the guides list, and the pencil on the admin Overview, open the dialog with the heading "Edit guide." and the same fields as Create guide.
+- Save guide saves the fields and the publication status, closes the dialog and refreshes the list. The guide's steps are passed through unchanged, so nothing is deleted or rewritten.
+- Planned repair steps shows the current number of steps and cannot be changed here. Edit steps (bottom left) opens the existing step editor, which also holds Simulations.
+- Difficulty keeps "Not set" for guides that have none, so saving does not invent one. Guide type is kept as stored.
+- Publishing a guide with no steps is refused, as in the step editor.
+- As in Create guide, typing a device or symptom that does not exist yet creates it. Typing a different device name moves the guide to that device; it does not rename the old one (rename it on the Devices page).
+
+**Consequences:**
+- The step editor page is still titled "Edit guide." It is now only reached from Create guide and Edit steps; rename it (for example "Guide steps") if two screens with one title is confusing.
+- Typecheck passes. Not run in a browser or against a live Supabase project.

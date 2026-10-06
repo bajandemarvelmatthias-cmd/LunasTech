@@ -28,10 +28,8 @@ export function AdminFlow({
   section,
   start,
 }: Readonly<{ section: "guides" | "simulations"; start?: AdminStart }>) {
-  // editGuide: a guide id opens that guide; null opens the "Add guide" form.
-  const [route, setRoute] = useState<Route>(() =>
-    typeof start?.editGuide === "string" ? { name: "edit", guideId: start.editGuide } : { name: "list" },
-  );
+  // editGuide: a guide id opens that guide in the Edit guide dialog; null opens the "Create guide" dialog.
+  const [route, setRoute] = useState<Route>({ name: "list" });
 
   switch (route.name) {
     case "edit":
@@ -81,6 +79,7 @@ export function AdminFlow({
     <GuideAdminList
       initialFilter={start?.filter}
       startNew={start?.editGuide === null}
+      initialEdit={typeof start?.editGuide === "string" ? start.editGuide : undefined}
       onOpen={(guideId, newGuide) => setRoute({ name: "edit", guideId, start: newGuide })}
     />
   );
