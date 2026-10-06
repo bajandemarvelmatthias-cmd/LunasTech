@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { ArrowRight } from "@phosphor-icons/react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
@@ -12,7 +13,8 @@ type Props = {
 export function SignupScreen({ onConfirmationSent }: Readonly<Props>) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [touched, setTouched] = useState({ email: false, password: false });
+  const [confirm, setConfirm] = useState("");
+  const [touched, setTouched] = useState({ email: false, password: false, confirm: false });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +25,9 @@ export function SignupScreen({ onConfirmationSent }: Readonly<Props>) {
     touched.password && !isValidNewPassword(password)
       ? `Password needs at least ${PASSWORD_MIN_LENGTH} characters.`
       : undefined;
-  const valid = isValidEmail(email) && isValidNewPassword(password);
+  const confirmError =
+    touched.confirm && confirm !== password ? "Passwords do not match." : undefined;
+  const valid = isValidEmail(email) && isValidNewPassword(password) && confirm === password;
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -74,13 +78,28 @@ export function SignupScreen({ onConfirmationSent }: Readonly<Props>) {
         help={passwordRule}
         error={passwordError}
       />
+      <TextField
+        label="Confirm password"
+        type="password"
+        autoComplete="new-password"
+        value={confirm}
+        onChange={(e) => setConfirm(e.target.value)}
+        onBlur={() => setTouched((t) => ({ ...t, confirm: true }))}
+        error={confirmError}
+      />
       {error && (
         <p role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}
-      <Button type="submit" disabled={!valid} loading={submitting}>
-        {submitting ? "Signing up" : "Sign up"}
+      <Button
+        type="submit"
+        disabled={!valid}
+        loading={submitting}
+        className="flex items-center justify-center gap-2"
+      >
+        {submitting ? "Creating account" : "Create my account"}
+        {!submitting && <ArrowRight className="size-6" aria-hidden="true" />}
       </Button>
     </form>
   );

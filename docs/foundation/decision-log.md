@@ -510,3 +510,25 @@ Option B. Phones keep the bottom tab bar. From md up the tabs move to a fixed le
 - The screenshots' full name and confirm password fields on sign up, Saved guides, Device Diagnosis, Devices, Diagnosis rules, Customers and Reports pages were not built: no backing tables or screens exist yet.
 - Stat cards, hero and the list on the admin overview use shadow-card; the screenshots' extra card nesting was not copied (no card inside a card).
 - Typecheck passes. ESLint and a browser run were not possible in the build environment. Not run against a live Supabase project.
+
+### #18
+**Date:** 2026-10-06
+**Milestone:** Login and sign up redesign from the second design file (amends #17)
+
+**Context:**
+The human supplied a newer design export (split-screen auth with heading block, tabs, Google button, email divider, full name and confirm password on sign up, legal line, no Customer / Admin choice) and said it is for the login and sign up pages.
+
+**Options Considered:**
+- A: Copy every element of the design, including the Google button, full name field and the prototype access note.
+- B: Apply the layout and look, and leave out elements the project cannot back yet.
+
+**Community Consensus:**
+Not searched. Chosen by recommendation.
+
+**Decision:**
+Option B. Applied: story panel with eyebrow, headline, feature cards and note; form side with eyebrow, title, subtitle, Log in / Sign up tabs, confirm password on sign up, legal line, Log in to LunasTech / Create my account buttons. The Customer / Admin choice from #17 is removed because the new design has none; admins still open in the admin workspace (profiles.role, #3) and can switch with Preview customer. Left out: Continue with Google (social login is not in the brief, and the Google provider is not set up in Supabase), Full name (handle_new_user() only creates the profile row, so saving a name needs a migration), Keep me signed in (Supabase already keeps the session), and the Prototype access note (authentication is real). Decorative grid, radial glow and ring shadows were not copied (no glows); the outlined ring and one gradient on the brand panel were.
+
+**Consequences:**
+- Adding Google sign-in later needs the provider enabled in Supabase plus one button; adding Full name needs a migration that reads display_name from signup metadata.
+- Auth text sizes follow the project tokens, not the design file's 8 to 12px sizes.
+- Typecheck passes. Not run in a browser or against a live Supabase project.

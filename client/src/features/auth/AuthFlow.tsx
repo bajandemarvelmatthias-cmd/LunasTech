@@ -4,7 +4,20 @@ import { LoginScreen } from "./LoginScreen";
 import { SignupScreen } from "./SignupScreen";
 import { ForgotPasswordScreen } from "./ForgotPasswordScreen";
 import { CheckEmailScreen } from "./CheckEmailScreen";
-import { AuthLayout } from "./AuthLayout";
+import { AuthLayout, type AuthHeading } from "./AuthLayout";
+
+const HEADING: Record<"login" | "signup", AuthHeading> = {
+  login: {
+    eyebrow: "Welcome back",
+    title: "Ready to repair?",
+    subtitle: "Sign in to continue learning where you left off.",
+  },
+  signup: {
+    eyebrow: "Join LunasTech",
+    title: "Start your repair journey.",
+    subtitle: "Create a customer account and start building practical skills.",
+  },
+};
 
 type View =
   | { name: "login" }
@@ -22,7 +35,7 @@ export function AuthFlow() {
   switch (view.name) {
     case "signup":
       return (
-        <AuthLayout tab="signup" onTab={(t) => setView(t === "login" ? { name: "login" } : { name: "signup" })}>
+        <AuthLayout heading={HEADING.signup} tab="signup" onTab={(t) => setView(t === "login" ? { name: "login" } : { name: "signup" })}>
           <SignupScreen
             onConfirmationSent={(email) =>
               setView({ name: "check-email", email, purpose: "signup" })
@@ -47,7 +60,7 @@ export function AuthFlow() {
       );
     default:
       return (
-        <AuthLayout tab="login" onTab={(t) => setView(t === "login" ? { name: "login" } : { name: "signup" })}>
+        <AuthLayout heading={HEADING.login} tab="login" onTab={(t) => setView(t === "login" ? { name: "login" } : { name: "signup" })}>
           <LoginScreen
             notice={linkError}
             onNeedsConfirmation={(email) =>

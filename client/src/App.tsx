@@ -2,7 +2,6 @@ import { useState } from "react";
 import { BookOpen, ChartLineUp, SquaresFour } from "@phosphor-icons/react";
 import { AuthProvider, useAuth } from "@/features/auth/AuthProvider";
 import { AuthFlow } from "@/features/auth/AuthFlow";
-import { takeLoginIntent } from "@/features/auth/loginIntent";
 import { ResetPasswordScreen } from "@/features/auth/ResetPasswordScreen";
 import { AdminFlow } from "@/features/admin/AdminFlow";
 import { fetchIsAdmin } from "@/features/admin/api";
@@ -28,14 +27,12 @@ type Workspace = "customer" | "admin";
 function SignedIn() {
   const { session } = useAuth();
   const userId = session?.user.id ?? "";
-  // The login form's Customer / Admin choice only picks the workspace that
-  // opens first. The database enforces what an admin may do.
-  const [intent] = useState(takeLoginIntent);
-  const [workspace, setWorkspace] = useState<Workspace>(intent === "customer" ? "customer" : "admin");
+  // Admins open in the admin workspace; everyone else gets the customer one.
+  // The database enforces what an admin may do.
+  const [workspace, setWorkspace] = useState<Workspace>("admin");
   const [tab, setTab] = useState("overview");
   const { data: isAdmin } = useLoad(() => fetchIsAdmin(userId), [userId]);
   const current: Workspace = isAdmin && workspace === "admin" ? "admin" : "customer";
-  const notAdmin = intent === "admin" && isAdmin === false;
 
   function switchTo(next: Workspace) {
     setWorkspace(next);
@@ -58,11 +55,6 @@ function SignedIn() {
       }
       nav={{ tabs: current === "admin" ? ADMIN_TABS : CUSTOMER_TABS, active: tab, onChange: setTab }}
     >
-      {notAdmin && (
-        <p role="alert" className="mb-6 text-sm text-danger">
-          This account is not an admin account, so the customer workspace opened instead.
-        </p>
-      )}
       {tab === "overview" &&
         (current === "admin" ? (
           <AdminOverview onOpenGuides={() => setTab("guides")} />
