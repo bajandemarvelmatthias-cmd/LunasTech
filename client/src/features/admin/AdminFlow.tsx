@@ -3,13 +3,14 @@ import { GuideAdminList } from "./GuideAdminList";
 import { GuideEditor } from "./GuideEditor";
 import { SimulationAdminList, SimulationEditor } from "./SimulationAdmin";
 import { SimulationsAllList } from "./SimulationsAllList";
+import type { NewGuideStart } from "./NewGuideForm";
 import type { AdminStart } from "./types";
 
 // "all" means the simulation was opened from the Simulations page; "guide"
 // means from a guide's own simulation list. Back returns to where it came from.
 type Route =
   | { name: "list" }
-  | { name: "edit"; guideId: string }
+  | { name: "edit"; guideId: string; start?: NewGuideStart }
   | { name: "sims"; guideId: string }
   | { name: "sim"; guideId: string; simulationId: string | null; from: "all" | "guide" };
 
@@ -38,6 +39,7 @@ export function AdminFlow({
         <Narrow wide>
           <GuideEditor
             guideId={route.guideId}
+            start={route.start}
             onBack={() => setRoute({ name: "list" })}
             onSimulations={(guideId) => setRoute({ name: "sims", guideId })}
           />
@@ -79,7 +81,7 @@ export function AdminFlow({
     <GuideAdminList
       initialFilter={start?.filter}
       startNew={start?.editGuide === null}
-      onOpen={(guideId) => setRoute({ name: "edit", guideId })}
+      onOpen={(guideId, newGuide) => setRoute({ name: "edit", guideId, start: newGuide })}
     />
   );
 }

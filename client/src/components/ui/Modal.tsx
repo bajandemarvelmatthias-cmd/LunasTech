@@ -12,9 +12,20 @@ const focus =
 export function Modal({
   open,
   title,
+  heading,
+  wide = false,
   onClose,
   children,
-}: Readonly<{ open: boolean; title: string; onClose: () => void; children: ReactNode }>) {
+}: Readonly<{
+  open: boolean;
+  title: string;
+  // Replaces the plain title text (for example eyebrow + large title + subtitle).
+  heading?: ReactNode;
+  // A wider dialog for longer forms. Tall content scrolls inside the dialog.
+  wide?: boolean;
+  onClose: () => void;
+  children: ReactNode;
+}>) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -28,12 +39,13 @@ export function Modal({
     <dialog
       ref={ref}
       onClose={onClose}
-      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-lg border border-border bg-surface p-0 text-text shadow-card backdrop:bg-brand/60"
+      aria-label={title}
+      className={`m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] ${wide ? "max-w-xl" : "max-w-md"} overflow-y-auto rounded-lg border border-border bg-surface p-0 text-text shadow-card backdrop:bg-brand/60`}
     >
       {open && (
         <div className="flex flex-col gap-6 p-6">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-base font-semibold">{title}</h2>
+          <div className="flex items-start justify-between gap-4">
+            {heading ?? <h2 className="text-base font-semibold">{title}</h2>}
             <button
               type="button"
               onClick={onClose}

@@ -15,6 +15,7 @@ import {
 import { useLoad } from "@/lib/useLoad";
 import { AddStepButton, confirmDiscard, EditorFrame, RemoveStepButton, useEditorActions } from "./editorParts";
 import { ImageField } from "./ImageField";
+import type { NewGuideStart } from "./NewGuideForm";
 import {
   createSymptom,
   fetchDeviceOptions,
@@ -50,12 +51,14 @@ const STATUS_OPTIONS = (Object.keys(STATUS_LABEL) as Status[]).map((s) => ({ val
 
 type Props = {
   guideId: string;
+  // Set right after "Create guide": how many empty steps to open with and the status to apply on save.
+  start?: NewGuideStart;
   onBack: () => void;
   onSimulations: (guideId: string) => void;
 };
 
 // Loads the guide, the devices and the symptoms, then hands over to the form.
-export function GuideEditor({ guideId, onBack, onSimulations }: Readonly<Props>) {
+export function GuideEditor({ guideId, start, onBack, onSimulations }: Readonly<Props>) {
   // The form sets this when something is edited and clears it on save.
   const dirty = useRef(false);
   const { data, loading, error, retry } = useLoad(
@@ -85,6 +88,7 @@ export function GuideEditor({ guideId, onBack, onSimulations }: Readonly<Props>)
           symptoms={data.symptoms}
           devices={data.devices}
           dirty={dirty}
+          start={start}
           onBack={onBack}
           onSimulations={onSimulations}
         />
@@ -101,17 +105,18 @@ type FormProps = {
   symptoms: SymptomOption[];
   devices: DeviceOption[];
   dirty: RefObject<boolean>;
+  start?: NewGuideStart;
   onBack: () => void;
   onSimulations: (guideId: string) => void;
 };
 
-function EditorForm({ detail, symptoms: initialSymptoms, devices, dirty, onBack, onSimulations }: Readonly<FormProps>) {
+function EditorForm({ detail, symptoms: initialSymptoms, devices, dirty, start, onBack, onSimulations }: Readonly<FormProps>) {
   const { session } = useAuth();
   const userId = session?.user.id ?? "";
 
   const [guideId, setGuideId] = useState(detail.id);
   const [status, setStatus] = useState<Status>(detail.status);
-  const [statusChoice, setStatusChoice] = useState<Status>(detail.status);
+  const [statusChoice, setStatusChoice] = useState<Status>(start?.status ?? detail.status);
   const [original, setOriginal] = useState<GuideStep[]>(detail.steps);
   const [title, setTitle] = useState(detail.title);
   const [description, setDescription] = useState(detail.description);
@@ -126,7 +131,7 @@ function EditorForm({ detail, symptoms: initialSymptoms, devices, dirty, onBack,
   const [coverPath, setCoverPath] = useState<string | null>(detail.coverImagePath);
   // A guide without steps yet opens with one empty step ready to fill in.
   const [drafts, setDrafts] = useState<StepDraft[]>(() =>
-    detail.steps.length > 0 ? toDrafts(detail.steps) : [blankStep()],
+    detail.steps.length > 0 ? toDrafts(detail.steps) : Array.from({ length: start?.planned ?? 1 }, blankStep),
   );
 
   function updateDraft(index: number, patch: Partial<StepDraft>) {

@@ -448,9 +448,10 @@ function deviceRow(f: DeviceFields) {
   };
 }
 
-export async function createDevice(fields: DeviceFields): Promise<void> {
-  const { error } = await supabase.from("device_types").insert(deviceRow(fields));
+export async function createDevice(fields: DeviceFields): Promise<string> {
+  const { data, error } = await supabase.from("device_types").insert(deviceRow(fields)).select("id").single();
   if (error) throw error;
+  return data.id as string;
 }
 
 // Guides link to a device by id, so renaming or archiving never breaks them.

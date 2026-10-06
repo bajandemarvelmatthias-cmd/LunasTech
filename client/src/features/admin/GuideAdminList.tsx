@@ -8,7 +8,7 @@ import { LoadError, PageHeader } from "@/features/overview/parts";
 import { cn, formatDate } from "@/lib/utils";
 import { useLoad } from "@/lib/useLoad";
 import { fetchAdminGuides } from "./api";
-import { NewGuideForm } from "./NewGuideForm";
+import { NewGuideForm, NewGuideHeading, type NewGuideStart } from "./NewGuideForm";
 import {
   DataList,
   EmptyNote,
@@ -32,7 +32,7 @@ export function GuideAdminList({
   initialFilter = "all",
   startNew = false,
   onOpen,
-}: Readonly<{ initialFilter?: GuideFilter; startNew?: boolean; onOpen: (guideId: string) => void }>) {
+}: Readonly<{ initialFilter?: GuideFilter; startNew?: boolean; onOpen: (guideId: string, start?: NewGuideStart) => void }>) {
   const { data, loading, error, retry } = useLoad(fetchAdminGuides, []);
   const [filter, setFilter] = useState<GuideFilter>(initialFilter);
   const [query, setQuery] = useState("");
@@ -99,12 +99,12 @@ export function GuideAdminList({
         title="All guides"
         actions={
           <Button className="w-auto" onClick={() => setAdding(true)}>
-            Add guide
+            New guide
           </Button>
         }
       />
       {body}
-      <Modal open={adding} title="Add guide" onClose={() => setAdding(false)}>
+      <Modal open={adding} wide title="Create guide" heading={<NewGuideHeading />} onClose={() => setAdding(false)}>
         <NewGuideForm onCreated={onOpen} onCancel={() => setAdding(false)} />
       </Modal>
     </div>
