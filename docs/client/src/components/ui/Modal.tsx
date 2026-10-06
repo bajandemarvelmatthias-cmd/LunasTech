@@ -1,0 +1,63 @@
+import { useEffect, useRef, type ReactNode } from "react";
+import { X } from "@phosphor-icons/react";
+
+const focus =
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+
+// Centered modal for one focused task (ux-ui-guidelines.md, modal vs panel).
+// Built on the native dialog element: it traps focus, closes on Escape and
+// returns focus to the control that opened it. The Close button is the other
+// way out, so nothing depends on a mouse. Children mount only while open, so
+// every opening starts blank.
+export function Modal({
+  open,
+  title,
+  heading,
+  wide = false,
+  onClose,
+  children,
+}: Readonly<{
+  open: boolean;
+  title: string;
+  // Replaces the plain title text (for example eyebrow + large title + subtitle).
+  heading?: ReactNode;
+  // A wider dialog for longer forms. Tall content scrolls inside the dialog.
+  wide?: boolean;
+  onClose: () => void;
+  children: ReactNode;
+}>) {
+  const ref = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  return (
+    <dialog
+      ref={ref}
+      onClose={onClose}
+      aria-label={title}
+      className={`m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] ${wide ? "max-w-xl" : "max-w-md"} overflow-y-auto rounded-lg border border-border bg-surface p-0 text-text shadow-card backdrop:bg-brand/60`}
+    >
+      {open && (
+        <div className="flex flex-col gap-6 p-6">
+          <div className="flex items-start justify-between gap-4">
+            {heading ?? <h2 className="text-base font-semibold">{title}</h2>}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className={`-mr-2 flex size-10 items-center justify-center rounded-md text-text-muted hover:text-text ${focus}`}
+            >
+              <X className="size-6" aria-hidden="true" />
+            </button>
+          </div>
+          {children}
+        </div>
+      )}
+    </dialog>
+  );
+}
