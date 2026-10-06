@@ -1,6 +1,5 @@
 import { useRef, useState, type DragEvent } from "react";
-import { Plus } from "@phosphor-icons/react";
-import { TextButton } from "@/components/ui/Button";
+import { Plus, X } from "@phosphor-icons/react";
 import { GuideImage } from "@/components/ui/GuideImage";
 import { IMAGE_ACCEPT, UnreadableImageError, uploadGuideImage } from "@/lib/guideImages";
 
@@ -56,6 +55,7 @@ export function ImageField({ label, path, folder, onChange }: Readonly<Props>) {
   return (
     <div className="flex flex-col gap-2">
       <span className="text-sm font-semibold">{label}</span>
+      <div className="relative">
       <button
         type="button"
         onClick={() => input.current?.click()}
@@ -84,6 +84,17 @@ export function ImageField({ label, path, folder, onChange }: Readonly<Props>) {
           </span>
         )}
       </button>
+      {path && !busy && (
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          aria-label={`Remove ${label.toLowerCase()}`}
+          className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-danger text-white shadow-card hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          <X className="size-4" weight="bold" aria-hidden="true" />
+        </button>
+      )}
+      </div>
       <input
         ref={input}
         type="file"
@@ -92,12 +103,6 @@ export function ImageField({ label, path, folder, onChange }: Readonly<Props>) {
         aria-label={label}
         onChange={(e) => void pick(e.target.files?.[0])}
       />
-      {path && !busy && (
-        <div className="flex gap-6">
-          <TextButton onClick={() => input.current?.click()}>Replace photo</TextButton>
-          <TextButton onClick={() => onChange(null)}>Remove photo</TextButton>
-        </div>
-      )}
       {error && (
         <p role="alert" className="text-sm text-danger">
           {error}
