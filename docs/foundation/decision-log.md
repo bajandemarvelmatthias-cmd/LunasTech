@@ -801,3 +801,22 @@ Option A. No schema change. This is the first time the app deletes guides, so it
 - Photos uploaded for the deleted guides stay in the guide-images storage bucket; the app does not remove them.
 - If deleting the guides works but deleting the device fails, the guides stay deleted and the device stays archived; the screen shows an error and the admin can try again.
 - Typecheck passes. Not run in a browser or against a live Supabase project.
+
+### #29
+**Date:** 2026-10-06
+**Milestone:** Manufacturer on devices (amends #23)
+
+**Context:**
+Migration 20261006010000 already added device_types.manufacturer, but no screen set or showed it. The human asked for a manufacturer field when adding a device.
+
+**Decision:**
+No schema change and no new component.
+- Add device and Edit device have an optional Manufacturer field (text, for example Apple), above Category.
+- The Devices list shows the manufacturer under the device name when one is set.
+- Devices created from the Create guide dialog have no manufacturer; set it in Edit device.
+- Archiving, restoring and deleting keep the manufacturer as it was.
+
+**Consequences:**
+- Existing devices have no manufacturer until one is entered.
+- The customer screens do not show it yet.
+- Typecheck passes. Not run in a browser or against a live Supabase project.

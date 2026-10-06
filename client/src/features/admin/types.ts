@@ -110,6 +110,7 @@ export const CATEGORY_LABEL: Record<DeviceCategory, string> = {
 // What an admin can set on a device (the form and the save call).
 export type DeviceFields = {
   name: string;
+  manufacturer: string;
   category: DeviceCategory | null;
   notes: string;
   status: DeviceStatus;

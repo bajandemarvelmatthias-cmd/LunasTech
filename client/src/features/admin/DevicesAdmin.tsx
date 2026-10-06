@@ -119,7 +119,7 @@ export function DevicesAdmin() {
 
   // Archives a device so customers no longer see it. Its guides are kept.
   async function archive(d: DeviceSummary, notice?: string) {
-    await updateDevice(d.id, { name: d.name, category: d.category, notes: d.notes, status: "archived" });
+    await updateDevice(d.id, { name: d.name, manufacturer: d.manufacturer, category: d.category, notes: d.notes, status: "archived" });
     if (notice) setRowError(notice);
   }
 
@@ -186,7 +186,7 @@ export function DevicesAdmin() {
     setWorkingId(d.id);
     setRowError(undefined);
     try {
-      await updateDevice(d.id, { name: d.name, category: d.category, notes: d.notes, status: "active" });
+      await updateDevice(d.id, { name: d.name, manufacturer: d.manufacturer, category: d.category, notes: d.notes, status: "active" });
       retry();
     } catch {
       setRowError(SAVE_FAILED);
@@ -252,6 +252,7 @@ export function DevicesAdmin() {
                       <DeviceTile category={d.category} />
                       <span className="flex min-w-0 flex-col">
                         <span className={TITLE}>{d.name}</span>
+                        {d.manufacturer && <span className={SUBTITLE}>{d.manufacturer}</span>}
                       </span>
                     </button>
                     <span className={SECONDARY}>{d.category ? CATEGORY_LABEL[d.category] : "Not set"}</span>
@@ -392,6 +393,7 @@ function DeviceForm({
   onCancel,
 }: Readonly<{ device: DeviceSummary | null; onSaved: () => void; onCancel: () => void }>) {
   const [name, setName] = useState(device?.name ?? "");
+  const [manufacturer, setManufacturer] = useState(device?.manufacturer ?? "");
   const [category, setCategory] = useState<DeviceCategory | "">(device?.category ?? "");
   const [notes, setNotes] = useState(device?.notes ?? "");
   const [status, setStatus] = useState<DeviceStatus>(device?.status ?? "active");
@@ -404,6 +406,7 @@ function DeviceForm({
     if (!trimmed) return;
     const fields: DeviceFields = {
       name: trimmed,
+      manufacturer: manufacturer.trim(),
       category: category || null,
       notes: notes.trim(),
       status,
@@ -431,6 +434,12 @@ function DeviceForm({
         }}
         error={error}
         help={trimmed ? undefined : "Enter a name to save."}
+      />
+      <TextField
+        label="Manufacturer (optional)"
+        help="For example: Apple"
+        value={manufacturer}
+        onChange={(e) => setManufacturer(e.target.value)}
       />
       <Select
         label="Category"

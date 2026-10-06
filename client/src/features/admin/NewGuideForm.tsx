@@ -181,7 +181,7 @@ function GuideFields({ options, detail, onCreated, onSaved, onEditSteps, onCance
     try {
       const deviceId =
         existing?.id ??
-        (await createDevice({ name: device.trim(), category, notes: "", status: "active" }));
+        (await createDevice({ name: device.trim(), manufacturer: "", category, notes: "", status: "active" }));
       const symptomId =
         deviceSymptoms.find((x) => same(x.name, symptom))?.id ?? (await createSymptom(deviceId, symptom.trim()));
       const saved = await saveGuide({
