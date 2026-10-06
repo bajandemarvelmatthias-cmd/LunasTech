@@ -30,7 +30,7 @@ function Brand({ dark }: Readonly<{ dark?: boolean }>) {
       >
         <Wrench className="size-6" aria-hidden="true" />
       </span>
-      LunasTech
+      <span>LunasTech</span>
     </span>
   );
 }
