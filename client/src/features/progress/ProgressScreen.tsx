@@ -36,6 +36,10 @@ function JourneyPanel({
 }: Readonly<{ started: number; completed: number; onOpenGuides: () => void }>) {
   const empty = started === 0;
   const percent = empty ? 0 : Math.round((completed / started) * 100);
+  const guideWord = started === 1 ? "guide" : "guides";
+  const summary = empty
+    ? "Finish a guide to unlock its simulation. Practice is how confidence grows."
+    : `${completed} of ${started} ${guideWord} completed. Practice is how confidence grows.`;
   return (
     <section className="flex flex-col items-start gap-6 rounded-lg border border-border bg-accent-soft p-8">
       <Lightning className="size-6 text-accent" aria-hidden="true" />
@@ -43,22 +47,14 @@ function JourneyPanel({
         <h2 className="text-lg font-semibold">
           {empty ? "Your learning journey starts now." : "Your learning journey."}
         </h2>
-        <p className="text-base text-text-muted">
-          {empty
-            ? "Finish a guide to unlock its simulation. Practice is how confidence grows."
-            : `${completed} of ${started} ${started === 1 ? "guide" : "guides"} completed. Practice is how confidence grows.`}
-        </p>
+        <p className="text-base text-text-muted">{summary}</p>
       </div>
-      <div
-        role="progressbar"
+      <progress
         aria-label="Guides completed"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percent}
-        className="h-2 w-full overflow-hidden rounded-md bg-surface"
-      >
-        <div className="h-full rounded-md bg-accent" style={{ width: `${percent}%` }} />
-      </div>
+        value={percent}
+        max={100}
+        className="h-2 w-full appearance-none overflow-hidden rounded-md bg-surface [&::-moz-progress-bar]:bg-accent [&::-webkit-progress-bar]:bg-surface [&::-webkit-progress-value]:rounded-md [&::-webkit-progress-value]:bg-accent"
+      />
       <Button onClick={onOpenGuides} className="flex w-auto items-center gap-2">
         Keep practicing <ArrowRight className="size-6" aria-hidden="true" />
       </Button>

@@ -111,9 +111,7 @@ function Form({
           </p>
         )}
         {done && (
-          <p role="status" className="text-sm font-semibold text-accent">
-            Profile saved.
-          </p>
+          <output className="block text-sm font-semibold text-accent">Profile saved.</output>
         )}
         <div className="flex flex-col gap-2">
           <Button type="submit" disabled={!valid} loading={submitting}>

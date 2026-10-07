@@ -7,8 +7,6 @@ export type Profile = {
   birthday: string;
 };
 
-export type ProfileInput = Profile;
-
 type ProfileRow = {
   first_name: string | null;
   last_name: string | null;
@@ -33,7 +31,7 @@ export async function fetchProfile(userId: string): Promise<Profile> {
 }
 
 // display_name is kept equal to "first last" so the admin Customers list shows it.
-export async function saveProfile(userId: string, input: ProfileInput): Promise<Profile> {
+export async function saveProfile(userId: string, input: Profile): Promise<Profile> {
   const firstName = input.firstName.trim();
   const lastName = input.lastName.trim();
   const { data, error } = await supabase

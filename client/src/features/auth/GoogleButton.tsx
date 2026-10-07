@@ -43,7 +43,7 @@ export function GoogleButton({ label }: Readonly<{ label: string }>) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-4 text-sm text-text-muted" role="separator">
         <span className="h-px flex-1 bg-border" />
-        or
+        <span>or</span>
         <span className="h-px flex-1 bg-border" />
       </div>
       <OutlineButton onClick={() => void handleClick()} disabled={loading} className="w-full">

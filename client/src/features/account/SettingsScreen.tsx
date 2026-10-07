@@ -22,12 +22,12 @@ function PasswordForm({ email, hadPassword }: Readonly<{ email: string; hadPassw
 
   const needsCurrent = passwordSet;
   const currentMissing = touched.current && needsCurrent && current === "";
-  const nextError =
-    touched.next && !isValidNewPassword(next)
-      ? `Password needs at least ${PASSWORD_MIN_LENGTH} characters.`
-      : touched.next && needsCurrent && next === current
-        ? "Choose a password different from your current one."
-        : undefined;
+  let nextError: string | undefined;
+  if (touched.next && !isValidNewPassword(next)) {
+    nextError = `Password needs at least ${PASSWORD_MIN_LENGTH} characters.`;
+  } else if (touched.next && needsCurrent && next === current) {
+    nextError = "Choose a password different from your current one.";
+  }
   const confirmError = touched.confirm && confirm !== next ? "Passwords do not match." : undefined;
   const valid =
     (!needsCurrent || current !== "") &&
@@ -124,9 +124,7 @@ function PasswordForm({ email, hadPassword }: Readonly<{ email: string; hadPassw
         </p>
       )}
       {done && (
-        <p role="status" className="text-sm font-semibold text-accent">
-          Password saved.
-        </p>
+        <output className="block text-sm font-semibold text-accent">Password saved.</output>
       )}
       <Button type="submit" disabled={!valid} loading={submitting}>
         {submitting ? "Saving" : "Save password"}

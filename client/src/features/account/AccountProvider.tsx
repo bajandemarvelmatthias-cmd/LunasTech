@@ -15,7 +15,6 @@ import {
   saveBirthdayIfEmpty,
   saveProfile,
   type Profile,
-  type ProfileInput,
 } from "./api";
 
 type AccountState = {
@@ -24,7 +23,7 @@ type AccountState = {
   error: boolean;
   // The name shown in menus: first and last name, else the part of the email before "@".
   name: string;
-  save: (input: ProfileInput) => Promise<void>;
+  save: (input: Profile) => Promise<void>;
   retry: () => void;
 };
 
@@ -82,7 +81,7 @@ export function AccountProvider({ children }: Readonly<{ children: ReactNode }>)
   }, [profile, providerToken, isGoogle, userId]);
 
   const save = useCallback(
-    async (input: ProfileInput) => {
+    async (input: Profile) => {
       setProfile(await saveProfile(userId, input));
     },
     [userId],

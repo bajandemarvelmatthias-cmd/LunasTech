@@ -129,12 +129,12 @@ export function DevicesAdmin() {
   async function remove(d: DeviceSummary) {
     const hasGuides = d.guides > 0;
     const n = d.symptoms.length;
-    const also = n > 0 ? ` This also deletes its ${n} ${n === 1 ? "symptom" : "symptoms"}.` : "";
-    const ok = window.confirm(
-      hasGuides
-        ? `${d.name} has ${d.guides} ${d.guides === 1 ? "guide" : "guides"}, so it can't be deleted. Archive it instead? Customers will no longer see it. Its guides are kept and you can restore it later.`
-        : `Delete ${d.name} permanently?${also} This can't be undone.`,
-    );
+    const symptomWord = n === 1 ? "symptom" : "symptoms";
+    const guideWord = d.guides === 1 ? "guide" : "guides";
+    const also = n > 0 ? ` This also deletes its ${n} ${symptomWord}.` : "";
+    const archiveMessage = `${d.name} has ${d.guides} ${guideWord}, so it can't be deleted. Archive it instead? Customers will no longer see it. Its guides are kept and you can restore it later.`;
+    const deleteMessage = `Delete ${d.name} permanently?${also} This can't be undone.`;
+    const ok = window.confirm(hasGuides ? archiveMessage : deleteMessage);
     if (!ok) return;
     setWorkingId(d.id);
     setRowError(undefined);
