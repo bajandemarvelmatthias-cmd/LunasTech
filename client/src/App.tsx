@@ -13,9 +13,9 @@ import { AdminOverview } from "@/features/overview/AdminOverview";
 import { CustomerOverview } from "@/features/overview/CustomerOverview";
 import { SidebarFooter } from "@/features/overview/SidebarFooter";
 import { ProgressScreen } from "@/features/progress/ProgressScreen";
-import { OutlineButton, TextButton } from "@/components/ui/Button";
+import { OutlineButton } from "@/components/ui/Button";
+import { ProfileMenu } from "@/components/ui/ProfileMenu";
 import { Shell, type NavTab } from "@/layout/Shell";
-import { supabase } from "@/lib/supabase";
 import { useLoad } from "@/lib/useLoad";
 
 const OVERVIEW: NavTab = { id: "overview", label: "Overview", icon: SquaresFour };
@@ -31,11 +31,6 @@ const ADMIN_TABS: NavTab[] = [
   { id: "devices", label: "Devices", icon: DeviceMobile },
   { id: "customers", label: "Customers", icon: Users },
 ];
-
-// Log out sits top right in both workspaces.
-const LOG_OUT = (
-  <TextButton onClick={() => void supabase.auth.signOut()}>Log out</TextButton>
-);
 
 // Admin workspace. Admins see only this; there is no way into the customer
 // screens (decision-log.md #21).
@@ -55,7 +50,7 @@ function AdminWorkspace({ email }: Readonly<{ email: string }>) {
       wide
       sidebarFooter={<SidebarFooter email={email} admin />}
       workspace="Admin workspace"
-      account={LOG_OUT}
+      account={<ProfileMenu email={email} role="Admin account" />}
       nav={{ tabs: ADMIN_TABS, active: tab, onChange: (id) => open(id) }}
     >
       {tab === "overview" && <AdminOverview onOpen={open} />}
@@ -83,10 +78,10 @@ function CustomerWorkspace({ email }: Readonly<{ email: string }>) {
 
   return (
     <Shell
-      wide={tab === "overview" || (tab === "guides" && guidesWide)}
+      wide={tab === "overview" || tab === "progress" || (tab === "guides" && guidesWide)}
       sidebarFooter={<SidebarFooter email={email} admin={false} onStart={() => openGuides()} />}
       workspace="Your workspace"
-      account={LOG_OUT}
+      account={<ProfileMenu email={email} role="Customer account" />}
       nav={{ tabs: CUSTOMER_TABS, active: tab, onChange: setTab }}
     >
       {tab === "overview" && <CustomerOverview onOpen={openGuides} />}
@@ -94,7 +89,7 @@ function CustomerWorkspace({ email }: Readonly<{ email: string }>) {
       <div hidden={tab !== "guides"}>
         <GuidesFlow key={guidesTarget.id} start={guidesTarget.start} onWide={setGuidesWide} />
       </div>
-      {tab === "progress" && <ProgressScreen />}
+      {tab === "progress" && <ProgressScreen onOpenGuides={() => openGuides()} />}
     </Shell>
   );
 }
@@ -112,7 +107,7 @@ function SignedIn() {
 
   if (error) {
     return (
-      <Shell account={LOG_OUT}>
+      <Shell account={<ProfileMenu email={email} />}>
         <div className="flex flex-col items-start gap-4">
           <p role="alert" className="text-sm text-danger">
             Can't load your account. Check your connection and try again.

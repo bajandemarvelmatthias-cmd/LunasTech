@@ -1,8 +1,12 @@
 import type { ReactNode } from "react";
+import { ArrowRight, ChartBar, CheckCircle, Lightning, Wrench } from "@phosphor-icons/react";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { StatCard } from "@/features/overview/parts";
 import { Button } from "@/components/ui/Button";
 import { useLoad } from "@/lib/useLoad";
 import { fetchProgress } from "./api";
+
+const eyebrow = "text-sm font-semibold uppercase tracking-widest text-accent";
 
 function Section({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
   return (
@@ -22,9 +26,50 @@ function Row({ label, note }: Readonly<{ label: string; note: string }>) {
   );
 }
 
-// Learning level first, then guides and simulations the user has touched.
-// The tab already says "Progress", so the screen has no title of its own.
-export function ProgressScreen() {
+// Learning journey panel. The bar shows guides completed out of guides started,
+// both read from the user's own rows. It does not show distance to the next
+// level: those thresholds live only in the database (decision-log.md #4, #11).
+function JourneyPanel({
+  started,
+  completed,
+  onOpenGuides,
+}: Readonly<{ started: number; completed: number; onOpenGuides: () => void }>) {
+  const empty = started === 0;
+  const percent = empty ? 0 : Math.round((completed / started) * 100);
+  return (
+    <section className="flex flex-col items-start gap-6 rounded-lg border border-border bg-accent-soft p-8">
+      <Lightning className="size-6 text-accent" aria-hidden="true" />
+      <div className="flex flex-col gap-2">
+        <h2 className="text-lg font-semibold">
+          {empty ? "Your learning journey starts now." : "Your learning journey."}
+        </h2>
+        <p className="text-base text-text-muted">
+          {empty
+            ? "Finish a guide to unlock its simulation. Practice is how confidence grows."
+            : `${completed} of ${started} ${started === 1 ? "guide" : "guides"} completed. Practice is how confidence grows.`}
+        </p>
+      </div>
+      <div
+        role="progressbar"
+        aria-label="Guides completed"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+        className="h-2 w-full overflow-hidden rounded-md bg-surface"
+      >
+        <div className="h-full rounded-md bg-accent" style={{ width: `${percent}%` }} />
+      </div>
+      <Button onClick={onOpenGuides} className="flex w-auto items-center gap-2">
+        Keep practicing <ArrowRight className="size-6" aria-hidden="true" />
+      </Button>
+    </section>
+  );
+}
+
+// Heading, three numbers, the learning journey panel, then the guides and
+// simulations the user has touched. Nothing is calculated here; the level and
+// results come from the database.
+export function ProgressScreen({ onOpenGuides }: Readonly<{ onOpenGuides: () => void }>) {
   const { session } = useAuth();
   const userId = session?.user.id ?? "";
   const { data, loading, error, retry } = useLoad(() => fetchProgress(userId), [userId]);
@@ -42,12 +87,31 @@ export function ProgressScreen() {
     );
   }
 
-  const empty = data.guides.length === 0 && data.simulations.length === 0;
+  const completed = data.guides.filter((g) => g.completed).length;
+  const passed = data.simulations.filter((s) => s.passed).length;
 
   return (
-    <div className="flex flex-col gap-6 pb-12">
-      <h1 className="text-lg font-semibold">Learning level {data.level}</h1>
-      {empty && <p className="text-base text-text-muted">Nothing yet.</p>}
+    <div className="flex flex-col gap-8 pb-12">
+      <div className="flex flex-col gap-2">
+        <span className={eyebrow}>Learn. Diagnose. Repair.</span>
+        <h1 className="text-lg font-semibold">Every step is progress.</h1>
+        <p className="text-base text-text-muted">
+          Keep learning. Your next repair starts with what you know.
+        </p>
+      </div>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        <StatCard stacked icon={CheckCircle} label="Simulations passed" value={passed} />
+        <StatCard stacked icon={Wrench} label="Guides completed" value={completed} />
+        <StatCard stacked icon={ChartBar} label="Learning level" value={data.level} />
+      </section>
+
+      <JourneyPanel
+        started={data.guides.length}
+        completed={completed}
+        onOpenGuides={onOpenGuides}
+      />
+
       {data.guides.length > 0 && (
         <Section title="Guides">
           {data.guides.map((g) => (

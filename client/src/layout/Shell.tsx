@@ -46,7 +46,7 @@ function TabButton({
 
 // Layout shell. Header and sidebar sizes are fixed (--size-header, --size-sidebar)
 // and never change between screens. Only the content area changes.
-// `account` is the top-right slot (log out, workspace switch).
+// `account` is the top-right slot (the profile button).
 // `workspace` names the area in the sidebar and breadcrumb.
 // `nav` (signed in only): bottom tab bar on phones, left sidebar from md up
 // (decision-log.md #17). Both render from the same tab list.

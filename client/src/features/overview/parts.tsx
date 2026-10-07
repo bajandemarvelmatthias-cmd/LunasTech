@@ -10,12 +10,15 @@ export function StatCard({
   label,
   value,
   note,
+  stacked,
   onClick,
 }: Readonly<{
   icon: Icon;
   label: string;
   value: string | number;
   note?: string;
+  // Icon on top, number below (the My Progress layout). Default is icon beside text.
+  stacked?: boolean;
   onClick?: () => void;
 }>) {
   const body = (
@@ -30,7 +33,10 @@ export function StatCard({
       </span>
     </>
   );
-  const card = "flex items-center gap-4 rounded-md border border-border bg-surface p-6 text-left shadow-card";
+  const card = cn(
+    "flex rounded-md border border-border bg-surface p-6 text-left shadow-card",
+    stacked ? "flex-col items-start gap-4" : "items-center gap-4",
+  );
   if (!onClick) return <div className={card}>{body}</div>;
   return (
     <button

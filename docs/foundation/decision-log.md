@@ -820,3 +820,20 @@ No schema change and no new component.
 - Existing devices have no manufacturer until one is entered.
 - The customer screens do not show it yet.
 - Typecheck passes. Not run in a browser or against a live Supabase project.
+
+### #30
+**Date:** 2026-10-08
+**Milestone:** My Progress redesign and profile button (amends #11, #20)
+
+**Context:**
+The human supplied a design for My Progress and asked that the top-right Log out become a user profile button.
+
+**Decision:**
+- My Progress now has: eyebrow and headline, three stat cards (simulations passed, guides completed, learning level), a learning journey panel with a progress bar and a "Keep practicing" button that opens Repair Guides, then the existing Guides and Simulations lists. The page is wide, like Overview. StatCard gained a `stacked` option for the icon-on-top layout.
+- The bar shows guides completed out of guides started. It does not show distance to the next level, so level thresholds stay only in the database (#4, #11).
+- Log out is replaced by a profile button (ProfileMenu): the user's initials open a small menu with name, email, account type and Log out. It is used in both workspaces and in the account error screen.
+
+**Consequences:**
+- Not built, because nothing backs them yet: "Guides saved" stat, Beginner/Explorer labels, search, notification bell, student workspace pill.
+- There is still no profile page; the button opens a menu only.
+- Typecheck passes. Not run in a browser or against a live Supabase project; ESLint not run.
