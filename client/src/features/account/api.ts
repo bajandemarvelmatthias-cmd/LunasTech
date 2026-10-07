@@ -54,41 +54,6 @@ export async function saveProfile(userId: string, input: Profile): Promise<Profi
   return toProfile(data as ProfileRow);
 }
 
-type GoogleBirthday = { date?: { year?: number; month?: number; day?: number } };
-
-const pad = (n: number) => String(n).padStart(2, "0");
-
-// Google shares a birthday only with the birthday permission, through its People
-// API, and only when the person has one on their account. Returns YYYY-MM-DD, or
-// null when it is missing, has no year, or the request is refused.
-export async function fetchGoogleBirthday(providerToken: string): Promise<string | null> {
-  try {
-    const res = await fetch(
-      "https://people.googleapis.com/v1/people/me?personFields=birthdays",
-      { headers: { Authorization: `Bearer ${providerToken}` } },
-    );
-    if (!res.ok) return null;
-    const body = (await res.json()) as { birthdays?: GoogleBirthday[] };
-    const date = body.birthdays?.map((b) => b.date).find((d) => d?.year && d.month && d.day);
-    if (!date?.year || !date.month || !date.day) return null;
-    return `${date.year}-${pad(date.month)}-${pad(date.day)}`;
-  } catch {
-    return null;
-  }
-}
-
-// Fills the birthday only while it is empty, so a value the user typed is never overwritten.
-export async function saveBirthdayIfEmpty(userId: string, birthday: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .update({ birthday })
-    .eq("id", userId)
-    .is("birthday", null)
-    .select("id");
-  if (error) return false;
-  return data.length > 0;
-}
-
 // Password sign-in exists when the account has an email identity. Google-only
 // accounts have no password until one is set.
 export function hasPassword(providers: unknown): boolean {

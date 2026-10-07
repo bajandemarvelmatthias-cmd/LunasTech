@@ -4,15 +4,12 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import {
-  fetchGoogleBirthday,
   fetchProfile,
-  saveBirthdayIfEmpty,
   saveProfile,
   type Profile,
 } from "./api";
@@ -47,7 +44,6 @@ export function AccountProvider({ children }: Readonly<{ children: ReactNode }>)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const triedGoogle = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,20 +63,6 @@ export function AccountProvider({ children }: Readonly<{ children: ReactNode }>)
       cancelled = true;
     };
   }, [userId, attempt]);
-
-  // Right after a Google sign-in the session carries a Google access token.
-  // Use it once to read the birthday, only if the profile has none yet.
-  const providerToken = session?.provider_token ?? null;
-  const isGoogle = session?.user.app_metadata?.provider === "google";
-  useEffect(() => {
-    if (!profile || profile.birthday || !providerToken || !isGoogle || triedGoogle.current) return;
-    triedGoogle.current = true;
-    void fetchGoogleBirthday(providerToken).then(async (birthday) => {
-      if (birthday && (await saveBirthdayIfEmpty(userId, birthday))) {
-        setProfile((p) => (p ? { ...p, birthday } : p));
-      }
-    });
-  }, [profile, providerToken, isGoogle, userId]);
 
   const save = useCallback(
     async (input: Profile) => {

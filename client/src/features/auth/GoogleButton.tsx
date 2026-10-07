@@ -15,10 +15,6 @@ function GoogleMark() {
   );
 }
 
-// Google shares first and last name by default. The birthday needs this extra
-// permission; AccountProvider reads it once after sign-in (decision-log.md #32).
-const BIRTHDAY_SCOPE = "https://www.googleapis.com/auth/user.birthday.read";
-
 // "or" divider plus the Google button. Sends the user to Google, which returns
 // to this same origin; AuthProvider then picks up the session.
 export function GoogleButton({ label }: Readonly<{ label: string }>) {
@@ -30,7 +26,7 @@ export function GoogleButton({ label }: Readonly<{ label: string }>) {
     setError(null);
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin, scopes: BIRTHDAY_SCOPE },
+      options: { redirectTo: window.location.origin },
     });
     // On success the browser leaves for Google, so only errors come back here.
     if (oauthError) {

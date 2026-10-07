@@ -896,3 +896,19 @@ The human asked that the first name, last name and birthday a person enters when
 - Existing accounts have no nickname until they set one.
 - Accounts created before this change are unaffected; only new email sign-ups carry the extra fields.
 - Typecheck passes. Not run in a browser or against a live Supabase project.
+
+### #34
+**Date:** 2026-10-09
+**Milestone:** Google sign-in no longer asks for the birthday (amends #32)
+
+**Context:**
+The human wants every tester to sign in with Google freely. The birthday permission (user.birthday.read) is a sensitive scope, so publishing the app with it shows an unverified-app warning and caps use at 100 users until Google verifies the app.
+
+**Decision:**
+- The Google button asks only for the default sign-in permissions (openid, email, profile). The birthday scope, the People API read in AccountProvider, and fetchGoogleBirthday / saveBirthdayIfEmpty in account/api.ts are removed.
+- Google users enter their birthday on the Profile page. Birthday stays optional.
+
+**Consequences:**
+- In Google Cloud, Data Access should list only the three default scopes, so the app can be published without Google verification.
+- The People API no longer needs to be enabled.
+- Typecheck not run here; run `npm run build` in client.
