@@ -878,3 +878,21 @@ The human asked for Profile and Settings pages reached from the account picture,
 - Email cannot be changed from the app.
 - The menu says "Log out" to match the rest of the app, not "Sign out" as in the screenshot.
 - Typecheck, ESLint and browser run not done; not run against a live Supabase project. Run `npm run build` and apply the migration.
+
+### #33
+**Date:** 2026-10-09
+**Milestone:** Nickname, and personal info captured at sign-up (amends #32)
+
+**Context:**
+The human asked that the first name, last name and birthday a person enters when registering fill their Profile page (still editable there), and that a person can set a nickname that the account menu shows.
+
+**Decision:**
+- The email sign-up form now asks for first name and last name (required) and birthday (optional). The values travel in the sign-up metadata (first_name, last_name, birthday). New migration 20261009000000_nickname_signup_info.sql rewrites handle_new_user to copy them into profiles, with display_name set to "first last". Google sign-ups still use given_name and family_name. Every value is trimmed, length-limited and range-checked in the database, and a bad birthday is dropped instead of blocking sign-up, because the metadata can be sent straight to the auth API.
+- profiles.nickname (up to 50 characters, optional) is editable by the user on their own row. The Profile page has a Nickname field.
+- The name shown in the sidebar chip, the phone menu, the avatar letter and the Profile header is now the nickname, else first and last name, else the part of the email before "@". display_name stays "first last", so the admin Customers list is unchanged.
+- Birthday checks moved to features/account/birthday.ts and are shared by the sign-up and Profile forms.
+
+**Consequences:**
+- Existing accounts have no nickname until they set one.
+- Accounts created before this change are unaffected; only new email sign-ups carry the extra fields.
+- Typecheck passes. Not run in a browser or against a live Supabase project.

@@ -4,14 +4,7 @@ import { Button, OutlineButton } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { PageHeader } from "@/features/overview/parts";
 import { useAccount } from "./AccountProvider";
-
-const MIN_BIRTHDAY = "1900-01-01";
-
-// Local date as YYYY-MM-DD, so "today" is the user's today and not UTC's.
-function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+import { birthdayProblem, MIN_BIRTHDAY, todayIso } from "./birthday";
 
 function Form({
   email,
@@ -19,29 +12,34 @@ function Form({
   avatarUrl,
 }: Readonly<{ email: string; role: string; avatarUrl: string | null }>) {
   const { profile, name, save } = useAccount();
-  const saved = profile ?? { firstName: "", lastName: "", birthday: "" };
+  const saved = profile ?? { firstName: "", lastName: "", birthday: "", nickname: "" };
   const [firstName, setFirstName] = useState(saved.firstName);
   const [lastName, setLastName] = useState(saved.lastName);
   const [birthday, setBirthday] = useState(saved.birthday);
+  const [nickname, setNickname] = useState(saved.nickname);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
   const today = todayIso();
-  const birthdayError =
-    birthday && (birthday > today || birthday < MIN_BIRTHDAY)
-      ? "Enter a birthday that is not in the future."
-      : undefined;
+  const birthdayError = birthdayProblem(birthday);
   const changed =
     firstName.trim() !== saved.firstName ||
     lastName.trim() !== saved.lastName ||
-    birthday !== saved.birthday;
-  const valid = changed && !birthdayError && firstName.trim().length <= 100 && lastName.trim().length <= 100;
+    birthday !== saved.birthday ||
+    nickname.trim() !== saved.nickname;
+  const valid =
+    changed &&
+    !birthdayError &&
+    firstName.trim().length <= 100 &&
+    lastName.trim().length <= 100 &&
+    nickname.trim().length <= 50;
 
   function reset() {
     setFirstName(saved.firstName);
     setLastName(saved.lastName);
     setBirthday(saved.birthday);
+    setNickname(saved.nickname);
     setError(null);
     setDone(false);
   }
@@ -53,7 +51,7 @@ function Form({
     setError(null);
     setDone(false);
     try {
-      await save({ firstName, lastName, birthday });
+      await save({ firstName, lastName, birthday, nickname });
       setDone(true);
     } catch {
       setError("Can't save your profile. Check your connection and try again.");
@@ -88,6 +86,17 @@ function Form({
           value={lastName}
           onChange={(e) => {
             setLastName(e.target.value);
+            setDone(false);
+          }}
+        />
+        <TextField
+          label="Nickname"
+          autoComplete="nickname"
+          maxLength={50}
+          help="Optional. Shown in the menu instead of your name."
+          value={nickname}
+          onChange={(e) => {
+            setNickname(e.target.value);
             setDone(false);
           }}
         />
@@ -128,7 +137,7 @@ function Form({
   );
 }
 
-// Profile page: picture, name, birthday and email. Google sign-ups arrive with
+// Profile page: picture, name, nickname, birthday and email. Google sign-ups arrive with
 // their name already filled in. The email is read-only.
 export function ProfileScreen({
   email,

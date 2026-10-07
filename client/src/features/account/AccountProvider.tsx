@@ -21,7 +21,7 @@ type AccountState = {
   profile: Profile | null;
   loading: boolean;
   error: boolean;
-  // The name shown in menus: first and last name, else the part of the email before "@".
+  // The name shown in menus: nickname, else first and last name, else the part of the email before "@".
   name: string;
   save: (input: Profile) => Promise<void>;
   retry: () => void;
@@ -29,7 +29,9 @@ type AccountState = {
 
 const AccountContext = createContext<AccountState | null>(null);
 
-export function fullNameOf(profile: Profile | null, email: string): string {
+export function shownNameOf(profile: Profile | null, email: string): string {
+  const nickname = profile?.nickname.trim() ?? "";
+  if (nickname) return nickname;
   const full = `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`.trim();
   return full || email.split("@")[0];
 }
@@ -92,7 +94,7 @@ export function AccountProvider({ children }: Readonly<{ children: ReactNode }>)
       profile,
       loading,
       error,
-      name: fullNameOf(profile, email),
+      name: shownNameOf(profile, email),
       save,
       retry: () => setAttempt((n) => n + 1),
     }),
