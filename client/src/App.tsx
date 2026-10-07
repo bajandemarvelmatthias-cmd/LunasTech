@@ -14,7 +14,9 @@ import { CustomerOverview } from "@/features/overview/CustomerOverview";
 import { SidebarFooter } from "@/features/overview/SidebarFooter";
 import { ProgressScreen } from "@/features/progress/ProgressScreen";
 import { OutlineButton } from "@/components/ui/Button";
+import { avatarUrlOf } from "@/components/ui/Avatar";
 import { ProfileMenu } from "@/components/ui/ProfileMenu";
+import { supabase } from "@/lib/supabase";
 import { Shell, type NavTab } from "@/layout/Shell";
 import { useLoad } from "@/lib/useLoad";
 
@@ -32,9 +34,21 @@ const ADMIN_TABS: NavTab[] = [
   { id: "customers", label: "Customers", icon: Users },
 ];
 
+const logOut = () => void supabase.auth.signOut();
+
+// Wide screens log out from the sidebar. Phones have no sidebar, so they keep
+// the profile button in the header.
+function PhoneProfile(props: Readonly<{ email: string; avatarUrl: string | null; role: string }>) {
+  return (
+    <div className="md:hidden">
+      <ProfileMenu {...props} />
+    </div>
+  );
+}
+
 // Admin workspace. Admins see only this; there is no way into the customer
 // screens (decision-log.md #21).
-function AdminWorkspace({ email }: Readonly<{ email: string }>) {
+function AdminWorkspace({ email, avatarUrl }: Readonly<{ email: string; avatarUrl: string | null }>) {
   const [tab, setTab] = useState("overview");
   // The overview can open a section at a given spot; the key restarts the section there.
   const [target, setTarget] = useState<{ id: number; start?: AdminStart }>({ id: 0 });
@@ -48,9 +62,9 @@ function AdminWorkspace({ email }: Readonly<{ email: string }>) {
   return (
     <Shell
       wide
-      sidebarFooter={<SidebarFooter email={email} admin />}
+      sidebarFooter={<SidebarFooter email={email} avatarUrl={avatarUrl} admin onLogout={logOut} />}
       workspace="Admin workspace"
-      account={<ProfileMenu email={email} role="Admin account" />}
+      account={<PhoneProfile email={email} avatarUrl={avatarUrl} role="Admin account" />}
       nav={{ tabs: ADMIN_TABS, active: tab, onChange: (id) => open(id) }}
     >
       {tab === "overview" && <AdminOverview onOpen={open} />}
@@ -64,7 +78,7 @@ function AdminWorkspace({ email }: Readonly<{ email: string }>) {
 }
 
 // Customer workspace. Customers see only this.
-function CustomerWorkspace({ email }: Readonly<{ email: string }>) {
+function CustomerWorkspace({ email, avatarUrl }: Readonly<{ email: string; avatarUrl: string | null }>) {
   const [tab, setTab] = useState("overview");
   // Opening guides from the dashboard remounts the flow so it can start at a device or a guide.
   const [guidesTarget, setGuidesTarget] = useState<{ id: number; start?: GuidesStart }>({ id: 0 });
@@ -79,9 +93,11 @@ function CustomerWorkspace({ email }: Readonly<{ email: string }>) {
   return (
     <Shell
       wide={tab === "overview" || tab === "progress" || (tab === "guides" && guidesWide)}
-      sidebarFooter={<SidebarFooter email={email} admin={false} onStart={() => openGuides()} />}
+      sidebarFooter={
+        <SidebarFooter email={email} avatarUrl={avatarUrl} admin={false} onStart={() => openGuides()} onLogout={logOut} />
+      }
       workspace="Your workspace"
-      account={<ProfileMenu email={email} role="Customer account" />}
+      account={<PhoneProfile email={email} avatarUrl={avatarUrl} role="Customer account" />}
       nav={{ tabs: CUSTOMER_TABS, active: tab, onChange: setTab }}
     >
       {tab === "overview" && <CustomerOverview onOpen={openGuides} />}
@@ -103,11 +119,12 @@ function SignedIn() {
   const { session } = useAuth();
   const userId = session?.user.id ?? "";
   const email = session?.user.email ?? "";
+  const avatarUrl = avatarUrlOf(session?.user);
   const { data: isAdmin, loading, error, retry } = useLoad(() => fetchIsAdmin(userId), [userId]);
 
   if (error) {
     return (
-      <Shell account={<ProfileMenu email={email} />}>
+      <Shell account={<ProfileMenu email={email} avatarUrl={avatarUrl} />}>
         <div className="flex flex-col items-start gap-4">
           <p role="alert" className="text-sm text-danger">
             Can't load your account. Check your connection and try again.
@@ -124,7 +141,7 @@ function SignedIn() {
       </Shell>
     );
   }
-  return isAdmin ? <AdminWorkspace email={email} /> : <CustomerWorkspace email={email} />;
+  return isAdmin ? <AdminWorkspace email={email} avatarUrl={avatarUrl} /> : <CustomerWorkspace email={email} avatarUrl={avatarUrl} />;
 }
 
 function Root() {

@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { SignOut } from "@phosphor-icons/react";
 import { supabase } from "@/lib/supabase";
+import { Avatar } from "./Avatar";
 
 const focus =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 // Top-right profile button (ux-ui-guidelines.md: account sits top right).
-// Shows the user's initials, same as the sidebar footer. Opens a small menu
+// Shows the user's picture or initials, same as the sidebar footer. Opens a small menu
 // with who is signed in and the Log out action. Closes on Escape, on a click
 // outside, or after choosing Log out.
 export function ProfileMenu({
   email,
   role,
-}: Readonly<{ email: string; role?: string }>) {
+  avatarUrl,
+}: Readonly<{ email: string; role?: string; avatarUrl?: string | null }>) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
 
@@ -40,9 +42,9 @@ export function ProfileMenu({
         aria-label="Profile"
         aria-haspopup="menu"
         aria-expanded={open}
-        className={`flex size-10 items-center justify-center rounded-md bg-accent-soft text-sm font-semibold text-accent hover:border-accent ${focus}`}
+        className={`rounded-md ${focus}`}
       >
-        {email.slice(0, 2).toUpperCase()}
+        <Avatar email={email} url={avatarUrl} className="size-10" />
       </button>
       {open && (
         <div

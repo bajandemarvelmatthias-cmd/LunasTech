@@ -837,3 +837,21 @@ The human supplied a design for My Progress and asked that the top-right Log out
 - Not built, because nothing backs them yet: "Guides saved" stat, Beginner/Explorer labels, search, notification bell, student workspace pill.
 - There is still no profile page; the button opens a menu only.
 - Typecheck passes. Not run in a browser or against a live Supabase project; ESLint not run.
+
+### #31
+**Date:** 2026-10-08
+**Milestone:** Log out in the sidebar and Google profile picture (amends #30)
+
+**Context:**
+The human asked to remove the profile button from the top right, put Log out in the left sidebar, and show a user's Google picture as their account picture when they sign in with Google.
+
+**Decision:**
+- From md up, Log out is a row at the bottom of the sidebar, under the signed-in account. The header's top right is empty.
+- Phones have no sidebar, so they keep the profile button in the header (md:hidden) as the only way to log out.
+- New Avatar component shows user_metadata.avatar_url (or picture), which Supabase fills for Google sign-in, and falls back to initials for email sign-ups or if the image fails to load. Used in the sidebar footer and the phone profile button.
+- The picture is read from the session each time. It is not copied into the database, so no schema change.
+
+**Consequences:**
+- The picture updates only when the user signs in with Google again; it is not stored in profiles.
+- Requires the Google provider to be enabled in Supabase (the Google button already exists).
+- Typecheck passes. Not run in a browser or against a live Supabase project.
