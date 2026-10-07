@@ -912,3 +912,17 @@ The human wants every tester to sign in with Google freely. The birthday permiss
 - In Google Cloud, Data Access should list only the three default scopes, so the app can be published without Google verification.
 - The People API no longer needs to be enabled.
 - Typecheck not run here; run `npm run build` in client.
+
+### #35
+**Date:** 2026-10-09
+**Milestone:** Logo opens the main page
+
+**Context:**
+The human asked that clicking the logo goes back to the main page.
+
+**Decision:**
+- Signed in, the LunasTech logo in the sidebar and in the phone header is a button that opens the first tab, which is Overview in both the customer and admin workspaces. Before sign-in and on loading screens the logo stays plain text.
+
+**Consequences:**
+- Same effect as the Home Page item in the account menu.
+- Typecheck not run here; run `npm run build` in client.

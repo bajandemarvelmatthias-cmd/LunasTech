@@ -54,6 +54,7 @@ function TabButton({
 // (decision-log.md #17). Both render from the same tab list.
 // `wide` gives dashboard pages room; other screens keep the narrow column.
 // `sidebarFooter` sits at the bottom of the sidebar (md and up).
+// Signed in, the logo is a button that opens the first tab, Overview.
 export function Shell({
   account,
   nav,
@@ -70,14 +71,23 @@ export function Shell({
   children: ReactNode;
 }>) {
   const activeLabel = nav?.tabs.find((t) => t.id === nav.active)?.label ?? nav?.label;
+  // The logo returns to the main page, which is the first tab (Overview).
+  const goHome = () => {
+    if (nav) nav.onChange(nav.tabs[0].id);
+  };
   return (
     <div className={cn("min-h-dvh", nav && "md:grid md:grid-cols-[var(--size-sidebar)_1fr]")}>
       {nav && (
         <aside className="sticky top-0 hidden h-dvh flex-col gap-2 border-r border-border bg-surface p-4 md:flex">
-          <span className="flex h-12 items-center gap-2 px-4 text-base font-semibold">
+          <button
+            type="button"
+            onClick={goHome}
+            aria-label="LunasTech, go to Overview"
+            className={cn("flex h-12 items-center gap-2 rounded-md px-4 text-base font-semibold", focus)}
+          >
             <Wrench className="size-6 text-accent" aria-hidden="true" />
             LunasTech
-          </span>
+          </button>
           <nav aria-label="Main" className="flex flex-col gap-2">
             {nav.tabs.map((tab) => (
               <TabButton key={tab.id} tab={tab} nav={nav} variant="side" />
@@ -88,7 +98,18 @@ export function Shell({
       )}
       <div className="flex min-h-dvh min-w-0 flex-col">
         <header className="flex h-(--size-header) shrink-0 items-center justify-between border-b border-border px-4 md:px-8">
-          <span className="text-base font-semibold md:hidden">LunasTech</span>
+          {nav ? (
+            <button
+              type="button"
+              onClick={goHome}
+              aria-label="LunasTech, go to Overview"
+              className={cn("rounded-md text-base font-semibold md:hidden", focus)}
+            >
+              LunasTech
+            </button>
+          ) : (
+            <span className="text-base font-semibold md:hidden">LunasTech</span>
+          )}
           {nav && workspace && (
             <span className="hidden text-base text-text-muted md:block">
               {workspace} / <span className="font-semibold text-text">{activeLabel}</span>
