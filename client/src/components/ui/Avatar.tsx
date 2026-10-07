@@ -10,16 +10,17 @@ export function avatarUrlOf(user: User | null | undefined): string | null {
   return typeof url === "string" && url.startsWith("https://") ? url : null;
 }
 
-// The user's picture when there is one, otherwise their initials. If the
-// picture cannot load, the initials show instead. Size comes from `className`.
+// The user's picture when there is one, otherwise the first letter of their
+// name. If the picture cannot load, the letter shows instead. Always a circle.
+// Size comes from `className`.
 export function Avatar({
-  email,
+  name,
   url,
   className,
-}: Readonly<{ email: string; url?: string | null; className?: string }>) {
+}: Readonly<{ name: string; url?: string | null; className?: string }>) {
   const [failed, setFailed] = useState(false);
   const base =
-    "flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-accent-soft text-sm font-semibold text-accent";
+    "flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-sm font-semibold text-accent";
   if (url && !failed) {
     return (
       <img
@@ -32,5 +33,5 @@ export function Avatar({
       />
     );
   }
-  return <span className={cn(base, className)}>{email.slice(0, 2).toUpperCase()}</span>;
+  return <span className={cn(base, className)}>{name.trim().charAt(0).toUpperCase()}</span>;
 }

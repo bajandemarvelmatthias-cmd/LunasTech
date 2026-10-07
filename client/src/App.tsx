@@ -15,8 +15,10 @@ import { SidebarFooter } from "@/features/overview/SidebarFooter";
 import { ProgressScreen } from "@/features/progress/ProgressScreen";
 import { OutlineButton } from "@/components/ui/Button";
 import { avatarUrlOf } from "@/components/ui/Avatar";
-import { ProfileMenu } from "@/components/ui/ProfileMenu";
-import { supabase } from "@/lib/supabase";
+import { AccountMenu } from "@/components/ui/AccountMenu";
+import { AccountProvider, useAccount } from "@/features/account/AccountProvider";
+import { ProfileScreen } from "@/features/account/ProfileScreen";
+import { SettingsScreen } from "@/features/account/SettingsScreen";
 import { Shell, type NavTab } from "@/layout/Shell";
 import { useLoad } from "@/lib/useLoad";
 
@@ -34,14 +36,27 @@ const ADMIN_TABS: NavTab[] = [
   { id: "customers", label: "Customers", icon: Users },
 ];
 
-const logOut = () => void supabase.auth.signOut();
+const PAGE_LABELS: Record<string, string> = { profile: "Profile", settings: "Settings" };
 
-// Wide screens log out from the sidebar. Phones have no sidebar, so they keep
-// the profile button in the header.
-function PhoneProfile(props: Readonly<{ email: string; avatarUrl: string | null; role: string }>) {
+// Wide screens open the account menu from the sidebar chip. Phones have no
+// sidebar, so they keep the picture button in the header.
+function PhoneProfile({
+  email,
+  avatarUrl,
+  onNavigate,
+}: Readonly<{ email: string; avatarUrl: string | null; onNavigate: (id: string) => void }>) {
+  const { name } = useAccount();
   return (
     <div className="md:hidden">
-      <ProfileMenu {...props} />
+      <AccountMenu
+        variant="avatar"
+        name={name}
+        email={email}
+        avatarUrl={avatarUrl}
+        onProfile={() => onNavigate("profile")}
+        onSettings={() => onNavigate("settings")}
+        onHome={() => onNavigate("overview")}
+      />
     </div>
   );
 }
@@ -49,6 +64,7 @@ function PhoneProfile(props: Readonly<{ email: string; avatarUrl: string | null;
 // Admin workspace. Admins see only this; there is no way into the customer
 // screens (decision-log.md #21).
 function AdminWorkspace({ email, avatarUrl }: Readonly<{ email: string; avatarUrl: string | null }>) {
+  const { name } = useAccount();
   const [tab, setTab] = useState("overview");
   // The overview can open a section at a given spot; the key restarts the section there.
   const [target, setTarget] = useState<{ id: number; start?: AdminStart }>({ id: 0 });
@@ -61,11 +77,21 @@ function AdminWorkspace({ email, avatarUrl }: Readonly<{ email: string; avatarUr
 
   return (
     <Shell
-      wide
-      sidebarFooter={<SidebarFooter email={email} avatarUrl={avatarUrl} admin onLogout={logOut} />}
+      wide={!(tab in PAGE_LABELS)}
+      sidebarFooter={
+        <SidebarFooter
+          admin
+          name={name}
+          email={email}
+          avatarUrl={avatarUrl}
+          onProfile={() => open("profile")}
+          onSettings={() => open("settings")}
+          onHome={() => open("overview")}
+        />
+      }
       workspace="Admin workspace"
-      account={<PhoneProfile email={email} avatarUrl={avatarUrl} role="Admin account" />}
-      nav={{ tabs: ADMIN_TABS, active: tab, onChange: (id) => open(id) }}
+      account={<PhoneProfile email={email} avatarUrl={avatarUrl} onNavigate={(id) => open(id)} />}
+      nav={{ tabs: ADMIN_TABS, active: tab, onChange: (id) => open(id), label: PAGE_LABELS[tab] }}
     >
       {tab === "overview" && <AdminOverview onOpen={open} />}
       {(tab === "guides" || tab === "simulations") && (
@@ -73,12 +99,15 @@ function AdminWorkspace({ email, avatarUrl }: Readonly<{ email: string; avatarUr
       )}
       {tab === "devices" && <DevicesAdmin />}
       {tab === "customers" && <CustomersAdmin />}
+      {tab === "profile" && <ProfileScreen email={email} role="Admin account" avatarUrl={avatarUrl} />}
+      {tab === "settings" && <SettingsScreen email={email} />}
     </Shell>
   );
 }
 
 // Customer workspace. Customers see only this.
 function CustomerWorkspace({ email, avatarUrl }: Readonly<{ email: string; avatarUrl: string | null }>) {
+  const { name } = useAccount();
   const [tab, setTab] = useState("overview");
   // Opening guides from the dashboard remounts the flow so it can start at a device or a guide.
   const [guidesTarget, setGuidesTarget] = useState<{ id: number; start?: GuidesStart }>({ id: 0 });
@@ -94,11 +123,20 @@ function CustomerWorkspace({ email, avatarUrl }: Readonly<{ email: string; avata
     <Shell
       wide={tab === "overview" || tab === "progress" || (tab === "guides" && guidesWide)}
       sidebarFooter={
-        <SidebarFooter email={email} avatarUrl={avatarUrl} admin={false} onStart={() => openGuides()} onLogout={logOut} />
+        <SidebarFooter
+          admin={false}
+          name={name}
+          email={email}
+          avatarUrl={avatarUrl}
+          onStart={() => openGuides()}
+          onProfile={() => setTab("profile")}
+          onSettings={() => setTab("settings")}
+          onHome={() => setTab("overview")}
+        />
       }
       workspace="Your workspace"
-      account={<PhoneProfile email={email} avatarUrl={avatarUrl} role="Customer account" />}
-      nav={{ tabs: CUSTOMER_TABS, active: tab, onChange: setTab }}
+      account={<PhoneProfile email={email} avatarUrl={avatarUrl} onNavigate={setTab} />}
+      nav={{ tabs: CUSTOMER_TABS, active: tab, onChange: setTab, label: PAGE_LABELS[tab] }}
     >
       {tab === "overview" && <CustomerOverview onOpen={openGuides} />}
       {/* Guides stays mounted so the person keeps their place; Progress reloads each visit. */}
@@ -106,6 +144,8 @@ function CustomerWorkspace({ email, avatarUrl }: Readonly<{ email: string; avata
         <GuidesFlow key={guidesTarget.id} start={guidesTarget.start} onWide={setGuidesWide} />
       </div>
       {tab === "progress" && <ProgressScreen onOpenGuides={() => openGuides()} />}
+      {tab === "profile" && <ProfileScreen email={email} role="Customer account" avatarUrl={avatarUrl} />}
+      {tab === "settings" && <SettingsScreen email={email} />}
     </Shell>
   );
 }
@@ -124,7 +164,11 @@ function SignedIn() {
 
   if (error) {
     return (
-      <Shell account={<ProfileMenu email={email} avatarUrl={avatarUrl} />}>
+      <Shell
+        account={
+          <AccountMenu variant="avatar" name={email.split("@")[0]} email={email} avatarUrl={avatarUrl} />
+        }
+      >
         <div className="flex flex-col items-start gap-4">
           <p role="alert" className="text-sm text-danger">
             Can't load your account. Check your connection and try again.
@@ -168,7 +212,11 @@ function Root() {
     );
   }
 
-  return <SignedIn />;
+  return (
+    <AccountProvider>
+      <SignedIn />
+    </AccountProvider>
+  );
 }
 
 export default function App() {

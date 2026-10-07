@@ -4,7 +4,9 @@ import { Wrench } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 export type NavTab = { id: string; label: string; icon: Icon };
-type Nav = { tabs: NavTab[]; active: string; onChange: (id: string) => void };
+// `label` names the page in the breadcrumb when `active` is a page that has no
+// tab of its own (Profile, Settings).
+type Nav = { tabs: NavTab[]; active: string; onChange: (id: string) => void; label?: string };
 
 const focus =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
@@ -67,7 +69,7 @@ export function Shell({
   sidebarFooter?: ReactNode;
   children: ReactNode;
 }>) {
-  const activeLabel = nav?.tabs.find((t) => t.id === nav.active)?.label;
+  const activeLabel = nav?.tabs.find((t) => t.id === nav.active)?.label ?? nav?.label;
   return (
     <div className={cn("min-h-dvh", nav && "md:grid md:grid-cols-[var(--size-sidebar)_1fr]")}>
       {nav && (

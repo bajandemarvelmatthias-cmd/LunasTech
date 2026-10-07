@@ -855,3 +855,26 @@ The human asked to remove the profile button from the top right, put Log out in 
 - The picture updates only when the user signs in with Google again; it is not stored in profiles.
 - Requires the Google provider to be enabled in Supabase (the Google button already exists).
 - Typecheck passes. Not run in a browser or against a live Supabase project.
+
+### #32
+**Date:** 2026-10-08
+**Milestone:** Profile and Settings pages, account menu, Google name and birthday (amends #30, #31)
+
+**Context:**
+The human asked for Profile and Settings pages reached from the account picture, a circular picture, a menu like the supplied screenshots (Profile, Settings, Home Page, then sign out), changing password and personal info, and recording a Google user's first name, last name and birthday.
+
+**Decision:**
+- New migration 20261008000000_profile_info.sql adds profiles.first_name, last_name and birthday. Users may update display_name, first_name, last_name and birthday on their own row; role and learning_level stay locked. handle_new_user fills the names (and display_name) from Google metadata at signup; existing users are backfilled.
+- display_name is saved as "first last", so the admin Customers list shows it with no change.
+- The sidebar footer is now an account chip (picture, name, up-down chevron) that opens a menu upward: Profile, Settings, Home Page, Log out. Phones keep the picture button in the header with the same menu opening downward. Home Page opens Overview. New AccountMenu replaces ProfileMenu.
+- Avatar is a circle and shows the first letter of the name. This is the one place a radius outside the two tokens is used, on the human's request.
+- Profile page: first name, last name, birthday, read-only email, account type. Settings page: sign-in methods, and change password. Email accounts must enter the current password first; Google-only accounts can set a password. Neither page has a tab; the breadcrumb names them through Shell's nav.label.
+- AccountProvider loads the profile once and shares it, so a saved name shows in the sidebar at once. It never blocks the screen.
+- Google birthday: the Google button now asks for the user.birthday.read permission. After sign-in, AccountProvider reads the birthday once from Google's People API and saves it only if the profile has none. If Google has no birthday with a year for the account, nothing is saved and the user can type it on the Profile page.
+
+**Consequences:**
+- Needs the People API enabled in the Google Cloud project, and the birthday scope added to the OAuth consent screen. It is a sensitive scope: while the app is in Testing only listed test users can use Google sign-in, and public use needs Google's verification.
+- Users already signed in with Google get the birthday only after logging in with Google again and accepting the new permission.
+- Email cannot be changed from the app.
+- The menu says "Log out" to match the rest of the app, not "Sign out" as in the screenshot.
+- Typecheck, ESLint and browser run not done; not run against a live Supabase project. Run `npm run build` and apply the migration.

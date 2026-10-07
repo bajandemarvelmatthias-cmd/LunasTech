@@ -37,6 +37,7 @@ export function TextField({
           className={cn(
             "h-(--size-control) w-full rounded-md border bg-surface px-4 text-base text-text",
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+            "read-only:bg-surface-secondary read-only:text-text-muted",
             error ? "border-danger" : "border-border",
             isPassword && "pr-12",
           )}
